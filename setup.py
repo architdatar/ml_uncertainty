@@ -10,7 +10,11 @@ with open('README.rst') as readme_file:
 with open('HISTORY.rst') as history_file:
     history = history_file.read()
 
-requirements = [ ]
+with open("requirements.txt") as requirements_file:
+    requirement_list = requirements_file.readlines()
+
+requirements = requirement_list
+#requirements = [ ]
 
 test_requirements = ['pytest>=3', ]
 
