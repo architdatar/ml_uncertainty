@@ -76,7 +76,7 @@ def test_feature_importance(model_fit):
 
 def test_feature_importance_parametric(model_fit):
     """Tests that feature importance can be obtained.
-        Here, we will require parametric intervals.
+    Here, we will require parametric intervals.
     """
 
     _, _, regr = model_fit
@@ -84,8 +84,7 @@ def test_feature_importance_parametric(model_fit):
     inf = EnsembleModelInference()
 
     df_imp_list = inf.get_feature_importance_intervals(
-        regr, return_full_distribution=False,
-        distribution="parametric"
+        regr, return_full_distribution=False, distribution="parametric"
     )
 
     # Getting the variables for dimensions.
@@ -135,24 +134,23 @@ def test_intervals(model_fit):
         pred_int_list[0].shape[0] == n_samples
     ), "Shape of the dataframe does not match the number of samples."
 
-    # Test that the output dataframe is right by verifying the first 
+    # Test that the output dataframe is right by verifying the first
     # 5 rows
-    df_expected_string = \
-    ''',mean,std,median,lower_bound,upper_bound\n
+    df_expected_string = """,mean,std,median,lower_bound,upper_bound\n
     0,20.514626422982776,26.73227351523108,11.107836549809928,-7.2673862345478275,75.70297124437309\n
     1,-15.368613442862479,15.682739238241636,-10.992424478595916,-44.76175165954471,3.4042684609686766\n
     2,10.86812975279185,19.488219008040645,12.309238938165487,-31.45347712964715,41.353964786612146\n
     3,5.443480417697841,17.221153086618703,1.764876555848281,-14.2276752925064,47.7225474631879\n
-    4,-1.9141498751819868,18.015088444213436,-4.446160653192964,-20.727319540143643,32.12844331653147\n'''
+    4,-1.9141498751819868,18.015088444213436,-4.446160653192964,-20.727319540143643,32.12844331653147\n"""
 
     df_expected = pd.read_csv(StringIO(df_expected_string), index_col=0)
 
     pd.testing.assert_frame_equal(pred_int_list[0].head(), df_expected)
-    
+
 
 def test_intervals_parametric(model_fit):
     """Tests that intervals work properly.
-        Here, we require that distribution be parametric.
+    Here, we require that distribution be parametric.
     """
 
     X, y, regr = model_fit
@@ -160,11 +158,7 @@ def test_intervals_parametric(model_fit):
     inf = EnsembleModelInference()
 
     pred_int_list = inf.get_intervals(
-        X,
-        regr,
-        is_train_data=True,
-        confidence_level=90.0,
-        distribution="parametric"
+        X, regr, is_train_data=True, confidence_level=90.0, distribution="parametric"
     )
 
     # Getting the variables for dimensions.

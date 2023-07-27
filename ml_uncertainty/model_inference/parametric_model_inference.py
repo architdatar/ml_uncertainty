@@ -1,59 +1,40 @@
-#%%
+"""
+DOF calculation: Talk by Hui Zou (https://hastie.su.domains/TALKS/enet_talk.pdf)
+
+1. Create tests for elastic net model. 
+    Degrees of freedom: ESL Pg 64 and 68
+2. Create functions correspondingly.
+3. Test that the parameter errors are being fit correctly.
+4. Test that the prediction intervals are computed correctly.
+5. Compare with statsmodels.
+
+# TODO: Write proper documentation.
+"""
+
 import autograd.numpy as np
-#import numpy as np
-from autograd import grad, jacobian
+
+# import numpy as np
+from autograd import jacobian
 from autograd import elementwise_grad as egrad
-import warnings
-from sklearn.linear_model import LinearRegression
-from sklearn.base import BaseEstimator, RegressorMixin
-import sys
-import os
-import scipy
-from scipy.optimize import least_squares
+import pandas as pd
 import sklearn
-from sklearn.exceptions import NotFittedError, DataDimensionalityWarning
+from sklearn.exceptions import DataDimensionalityWarning
+from ..error_propagation.error_propagation import ErrorPropagation
+from .common_model_functions import linear_model, ordinary_residual, least_squares_loss
+from ..error_propagation.error_propagation import (
+    get_significance_levels,
+    get_z_values,
+)
 
-sys.path.append(os.path.dirname(__file__))
-
-from ml_uncertainty.error_propagation.error_propagation import ErrorPropagation
-
-
-# Defining some commonly used utils.
-
-def linear_model(X, coefs_, intercept_=0):
-    return X @ coefs_ + intercept_
-
-def linear_residual_function(X, coefs_, y, intercept_=0):
-    y_pred = linear_model(X, coefs_, intercept_=intercept_)
-    residuals = y_pred - y
-    return residuals
-
-def linear_loss_function(X, coefs_, y, intercept_=0):
-    """
-    """
-    residuals = linear_residual_function(X, coefs_, y, intercept_=intercept_)
-    loss = 1 / (2 * residuals.shape[0]) * (residuals @ residuals)
-    return loss
-
-def elastic_net_loss_function(X, coefs_, y, intercept_=0, alpha=1, l1_ratio=0.5):
-    """
-    Warning: This function doesn't compute the L1
-    norm because the error cannot be computed with it. 
-    """
-
-    residuals = linear_residual_function(X, coefs_, y, intercept_=intercept_)
-    loss =  1 / (2 * residuals.shape[0]) * (residuals @ residuals) +\
-            alpha * l1_ratio * np.linalg.norm(coefs_, ord=2) +\
-            0.5  * alpha * (1-l1_ratio) * np.linalg.norm(coefs_, ord=2)**2
-
-    return loss
+# Reusing function to check that arrays have the right type and dtype.
+check_type_and_dtype = ErrorPropagation.check_type_and_dtype
 
 
 class ParametricModelInference:
     """
     Contains a group of methods to get model inference from models in scikit-learn
-    NOTE: The functions get_J, get_H are adopted from 
-    https://github.com/sriki18/adnls/blob/master/adnls.py#L92. 
+    NOTE: The functions get_J, get_H are adopted from
+    https://github.com/sriki18/adnls/blob/master/adnls.py#L92.
     """
 
     """
@@ -71,109 +52,342 @@ class ParametricModelInference:
         """
         Initialize the class
         """
-        
-    def get_model_inference(self,
-                            X, 
-                            y, 
-                            y_weights=None,
-                            estimator=None, 
-                            model_function=None,
-                            model_function_kwargs=None,
-                            residual_function=None,
-                            residual_function_kwargs=None,
-                            loss_function=None,
-                            loss_function_kwargs=None):
-        """Gets model inference for the selected fitted estimator.
-        
-        
+
+        self.__estimators_implemented = [
+            sklearn.linear_model._base.LinearRegression,
+            sklearn.linear_model._coordinate_descent.ElasticNet,
+        ]
+
+    def set_up_model_inference(
+        self,
+        X_train,
+        y_train,
+        estimator=None,
+        model=None,
+        model_kwargs=None,
+        residual=None,
+        residual_kwargs=None,
+        loss=None,
+        loss_kwargs=None,
+        regularization=None,
+        intercept=None,
+        best_fit_params=None,
+        l1_penalty=None,
+        l2_penalty=None,
+        y_train_weights=None,
+        model_dof=None,
+    ):
+        """Sets up model inference for the fitted model.
+
+        Validates models, inputs and raises errors if necessary.
+
+        Parameters
+        ----------
+
+
         """
 
-        # Assigns variables to class attributes.        
-        self.X = X
-        self.y = y
-        self.y_weights = y_weights
+        self.X_train = X_train
+        self.y_train = y_train
         self.estimator = estimator
-        self.model_function = model_function
-        self.model_function_kwargs = model_function_kwargs
-        self.residual_function = residual_function
-        self.residual_function_kwargs = residual_function_kwargs
-        self.loss_function = loss_function
-        self.loss_function_kwargs = loss_function_kwargs
-
-        # Validate the inputs are right. 
-        if self.y.ndim != 1:
-            raise DataDimensionalityWarning("y should be a 1-D array.\
-                                            Please provide appropriately.")
+        self.model = model
+        self.model_kwargs = model_kwargs
+        self.residual = residual
+        self.residual_kwargs = residual_kwargs
+        self.loss = loss
+        self.loss_kwargs = loss_kwargs
+        self.regularization = regularization
+        self.intercept = intercept
+        self.best_fit_params = best_fit_params
+        self.l1_penalty = l1_penalty
+        self.l2_penalty = l2_penalty
+        self.y_train_weights = y_train_weights
+        self.model_dof = model_dof
 
         # Validate that the estimators, etc. are correctly specified.
         self._validate_input_arguments()
 
-        # Compute the Jacobian of the residuals.
-        J = self.get_J(self.residual_function)
-        H = self.get_H(self.loss_function)
-        sigma = self.get_sig(self.residual_function) # Square root of RSS
+        # Compute model and error degrees of freedom.
+        self._set_model_dof()
+        self._set_error_dof()
 
-        # Allows for inference from weighted least squares, ultimately allowing for
-        # errors in Y.
-        if self.y_weights is None:
-            self.sigma = sigma
+        self._set_sigma()  # Square root of RSS
 
-        self.H = H
+        # Compute parameter standard deviations.
+        self._set_parameter_errors()
 
-        # Get variance-covariance matrix.
-        self.vcov = self.get_vcov()
-        self.sd_coef = self.get_sd_bf()
+    def model_function(self, X, coefs_, intercept_, **model_kwargs):
+        return self.model(X, coefs_, intercept_, **model_kwargs)
 
+    def residual_function(
+        self, X, coefs_, intercept_, y, model_kwargs, **residual_kwargs
+    ):
+        """ """
+        y_pred = self.model_function(
+            X=X, coefs_=coefs_, intercept_=intercept_, **model_kwargs
+        )
+        return self.residual(y_pred, y, **residual_kwargs)
+
+    def loss_function(
+        self, X, coefs_, intercept_, y, model_kwargs, residual_kwargs, **loss_kwargs
+    ):
+        """ """
+        residuals = self.residual_function(
+            X, coefs_, intercept_, y, model_kwargs, **residual_kwargs
+        )
+
+        loss_term = self.loss(residuals)
+
+        if self.regularization == "none":
+            loss = loss_term
+        elif self.regularization == "l1":
+            """NOTE: This is an approximation of the L1 norm so that it can
+            be differenciated. Autograd does not differenciate L1 norm,
+            so this is a stopgap arrangement.
+            """
+            loss = loss_term + self.l1_penalty * np.linalg.norm(coefs_, ord=2)
+        elif self.regularization == "l2":
+            loss = loss_term + self.l2_penalty * np.linalg.norm(coefs_, ord=2) ** 2
+        elif self.regularization == "l1+l2":
+            loss = (
+                loss_term
+                + self.l1_penalty * np.linalg.norm(coefs_, ord=2)
+                + self.l2_penalty * np.linalg.norm(coefs_, ord=2) ** 2
+            )
+        elif self.regularization == "custom":
+            # TODO: Enable custom regularization
+            raise NotImplementedError(
+                "Custom regularization not implemented as of \
+                                      this version. Will be implemented in future. \
+                                      Please reconstruct this function externally as \
+                                      shown in examples."
+            )
+
+        return loss
 
     def _validate_input_arguments(self):
-        """Validates that the correct input arguments are provided.
-        """
+        """Validates that the correct input arguments are provided."""
 
-        if self.estimator is not None: # inputs to be extracted through estimator object.
-            # Check that the estimator is fitted.    
+        # Validate X.
+        self._validate_X(self.X_train)
+
+        # Validate y.
+        self._validate_y(self.y_train)
+
+        # Validate estimator.
+        if self.estimator is not None:
+            # Check that the estimator is fitted.
             sklearn.utils.validation.check_is_fitted(self.estimator)
 
-            # Get the Jacobian matrix for this model. 
-            if type(self.estimator) == sklearn.linear_model._base.LinearRegression:
-                self.model_function = linear_model
-                self.residual_function = linear_residual_function
-                self.loss_function = linear_loss_function
-
-                self.model_function_kwargs = dict(intercept_=self.estimator.intercept_)
-                self.residual_function_kwargs=dict()
-                self.loss_function_kwargs=dict()
-
-            elif type(self.estimator) == sklearn.linear_model._coordinate_descent.ElasticNet:
-                self.model_function = linear_model
-                self.residual_function = linear_residual_function
-                self.loss_function = elastic_net_loss_function
-                
-                self.model_function_kwargs = dict(intercept_=self.estimator.intercept_)
-                self.residual_function_kwargs = dict(intercept_=self.estimator.intercept_)
-                self.loss_function_kwargs = dict(alpha=self.estimator.alpha,
-                                l1_ratio=self.estimator.l1_ratio)
-
+            # If estimator is of known type, populate the arguments for it.
+            if type(self.estimator) in self.__estimators_implemented:
+                self._populate_args_for_known_estimators()
+            else:
+                raise ValueError(
+                    f"Estimator of type {type(self.estimator).__module__} \
+                                 cannot be used to infer the desired properties for \
+                                 error analysis. Please supply the required functions \
+                                 externally."
+                )
         else:
-            # Check that all the required functions are provided. 
-            if any([self.model_function is None, 
-                    self.residual_function is None, 
-                    self.loss_function is None]):
-                raise NotImplementedError("One of model_function,\
-                            residual_function, loss_function is not defined.\
-                            Please provide all three.")
-            
-            # Further validate these functions by checking that they yield the
-            # desired values in the desired formats. 
+            # Check that all the required functions are provided.
+            if any(
+                [
+                    self.model is None,
+                    self.residual is None,
+                    self.loss is None,
+                    self.best_fit_params is None,
+                ]
+            ):
+                raise ValueError(
+                    "At least one of model_function,\
+                        residual_function, loss_function, best fit params \
+                        is not defined.\
+                        Please provide all the above as it is necessary for \
+                        model inference."
+                )
 
+            # TODO: Further validate these functions by checking that they yield the
+            # desired values in the desired formats.
+            # TODO: Also validate other parameters related to best fit and regularization.
 
-    def get_J(self, residual_function) -> np.ndarray:
+    def _validate_X(self, X):
+        """Checks that X is an ndarray of 2 dimensions and shape (m, n ).
+
+        Checks that m and n > 0 .
+        """
+
+        X = check_type_and_dtype(X)
+
+        if X.ndim == 2 and X.shape[0] > 0 and X.shape[1] > 0:
+            return X
+        else:
+            raise DataDimensionalityWarning(
+                "X should be a np.ndarray object with 2 dimensions and shape\
+                (m, n) where m>0 and n>0.\
+                Please correct the format."
+            )
+
+    def _validate_y(self, y):
+        """Validates y variable."""
+
+        y = check_type_and_dtype(y)
+
+        if y.ndim != 1:
+            raise DataDimensionalityWarning(
+                "y should be a 1-D array.\
+                    Please provide appropriately. \
+                    Support for multiple targets is not available \
+                    as of this version. Please treat each target as a separate model."
+            )
+
+    def _populate_args_for_known_estimators(self):
+        """Populates required arguments for known estimators.
+
+        For instance, If we know that the estimator is a sklearn class,
+        we automatically assign it the required functions and get the
+        required parameters.
+        """
+
+        # Get the Jacobian matrix for this model.
+        if type(self.estimator) == sklearn.linear_model._base.LinearRegression:
+            if self.estimator.fit_intercept:
+                self.intercept = self.estimator.intercept_
+            self.best_fit_params = self.estimator.coef_
+            self.model = linear_model
+            self.residual = ordinary_residual
+            self.loss = least_squares_loss
+
+            # Get regularization info.
+            self.regularization = "none"
+            self.l1_penalty = None
+            self.l2_penalty = None
+
+            self.model_kwargs = dict()
+            self.residual_kwargs = dict()
+            self.loss_kwargs = dict()
+
+        elif (
+            type(self.estimator) == sklearn.linear_model._coordinate_descent.ElasticNet
+        ):
+            if self.estimator.fit_intercept:
+                self.intercept = self.estimator.intercept_
+            self.best_fit_params = self.estimator.coef_
+            self.model = linear_model
+            self.residual = ordinary_residual
+            self.loss = least_squares_loss
+
+            # Get regularization info.
+            self.regularization = "l1+l2"
+            self.l1_penalty = self.estimator.alpha * self.estimator.l1_ratio
+            self.l2_penalty = 0.5 * self.estimator.alpha * (1 - self.estimator.l1_ratio)
+
+            self.model_kwargs = dict()
+            self.residual_kwargs = dict()
+            self.loss_kwargs = dict()
+
+    def _set_model_dof(self):
+        """Computes model degrees of freedom."""
+
+        model_dof = self.model_dof
+        regularization = self.regularization
+
+        intercept = self.intercept
+        best_fit_params = self.best_fit_params
+
+        if model_dof is not None:
+            # Model degrees of freedom externally computed and specified.
+            return model_dof
+        else:  # Compute model degrees of freedom internally.
+            if regularization == "none":
+                model_dof = best_fit_params.shape[0]
+            elif regularization == "l1":
+                non_zero_mask = best_fit_params != 0
+                model_dof = best_fit_params[non_zero_mask].shape[0]
+            elif regularization == "l2":
+                """Source: Elements of Statistical Learning, Ed. 2, Pg 68"""
+                d_values = np.linalg.svd(self.X_train)[1]
+                l2_penalty = self.l2_penalty
+                model_dof = (d_values ** 2 / (d_values ** 2 + l2_penalty)).sum()
+            elif regularization == "l1+l2":
+                """Elastic net-type.
+                In this case, we refer to the talk by Hui Zou
+                (https://hastie.su.domains/TALKS/enet_talk.pdf)
+                """
+                non_zero_mask = best_fit_params != 0
+                d_values = np.linalg.svd(self.X_train)[1]
+
+                # Since there is L1 regualarization, apply non-zero mask
+                # to singular values of X_train.
+                d_values = d_values[non_zero_mask]
+                l2_penalty = self.l2_penalty
+                model_dof = (d_values ** 2 / (d_values ** 2 + l2_penalty)).sum()
+
+        # The intercept value is not penalized during regularization.
+        # So, it should be added as +1 to the model degrees of freedom.
+        if intercept is not None:
+            model_dof += 1
+
+        # Set model dof.
+        self.model_dof = model_dof
+
+    def _set_error_dof(self):
+        """Error dof = n-p"""
+        self.error_dof = self.X_train.shape[0] - self.model_dof
+
+    def _set_sigma(self):
+        """Standard deviation of the fit.
+
+        Estimate standard deviation from the residual vector.
+
+        Parameters
+        ----------
+        residual_function: callable
+            Function to compute residuals for the training data.
+        error_dof: float
+            Error / residual degrees of freedom for the fit.
+        Returns
+        -------
+        sig
+            Estimated standard deviation.
+        """
+
+        res = self.residual_function(
+            self.X_train,
+            self.best_fit_params,
+            self.intercept,
+            self.y_train,
+            self.model_kwargs,
+            **self.residual_kwargs,
+        )
+
+        # Also allow for inference from weighted least
+        # squares, ultimately allowing for heteroskedasticity in y.
+        # NOTE: Here, the weights are normalized by their mean,
+        # So, if they all have the same weights, they drop out.
+        if self.y_train_weights is not None:
+            res = self.y_train_weights / self.y_train_weights.mean() * res
+
+        sigma = np.sqrt(np.matmul(res.transpose(), res) / self.error_dof)
+        self.sigma = sigma
+
+    def get_J(
+        self,
+        residual_function,
+        best_fit_params,
+        X,
+        intercept_,
+        y,
+        model_kwargs,
+        residual_kwargs,
+    ) -> np.ndarray:
         """Jacobian of residuals.
 
         Residuals (prediction - data) of the fit of interest.
 
         Parameters
         ----------
-        
+
         X
             The `np.ndarray` of paramaters used to compute the Jacobian.
 
@@ -182,13 +396,27 @@ class ParametricModelInference:
         J
             Jacobian of residuals.
         """
-        coefs_ = self.estimator.coef_
-        J = jacobian(lambda coefs_: residual_function(self.X, coefs_, 
-                     self.y, **self.residual_function_kwargs))(coefs_)
+
+        coefs_ = best_fit_params
+
+        J = jacobian(
+            lambda coefs_: residual_function(
+                X, coefs_, intercept_, y, model_kwargs, **residual_kwargs
+            )
+        )(coefs_)
         return J
 
-
-    def get_H(self, loss_function) -> np.ndarray:
+    def get_H(
+        self,
+        loss_function,
+        best_fit_params,
+        X,
+        intercept_,
+        y,
+        model_kwargs,
+        residual_kwargs,
+        loss_kwargs,
+    ) -> np.ndarray:
         """Hessian of objective function.
 
         Hessian of the objective function is the Jacboian of the gradient
@@ -204,41 +432,41 @@ class ParametricModelInference:
         H
             Hessian of the objective function.
         """
-        coefs_ = self.estimator.coef_
+        coefs_ = best_fit_params
 
         H = jacobian(
-            egrad(lambda coefs_: loss_function(self.X, coefs_, 
-                self.y, **self.loss_function_kwargs))
-                )(coefs_)
+            egrad(
+                lambda coefs_: loss_function(
+                    X,
+                    coefs_,
+                    intercept_,
+                    y,
+                    model_kwargs,
+                    residual_kwargs,
+                    **loss_kwargs,
+                )
+            )
+        )(coefs_)
+
+        # TODO:
+        # 1. For linear models and ridge, there is a closed form
+        # solution. Var[b]=σ2(X′X)−1.
+        # https://stats.stackexchange.com/questions/68151/how-to-derive-variance-covariance-matrix-of-coefficients-in-linear-regression
+        # Ridge: https://online.stat.psu.edu/stat857/node/155/ under Properties of Ridge estimator.
+        # 2. Allow users to compute Hessian through a first-order approximation for
+        # functions that might not be 2-times differenciable. Refer to Niclas
+        # Borgin's lectures.
+
         return H
-
-
-    def get_sig(self, residual_function) -> float:
-        """Standard deviation of the fit.
-
-        Estimate standard deviation from the residual vector.
-
-        Returns
-        -------
-        sig
-            Estimated standard deviation.
-        """
-        coef_ = self.estimator.coef_
-        m = self.X.shape[0]
-        n = coef_.shape[0]
-        res = residual_function(self.X, coef_, self.y, **self.residual_function_kwargs)
-        sig = np.sqrt(np.matmul(res.transpose(), res) / (m - n))
-        return sig
-
 
     def get_vcov(self) -> np.ndarray:
         """Variance-covariance matrix of parameters.
-        
+
         Estimate variance-covariance matrix of the provided parameters.
         The formula used is $$ D = \sigma^2 (\nabla^2 f(x^*))^{-1}$$ as described in the
-        lecture notes of Niclas Börlin. 
+        lecture notes of Niclas Börlin.
         https://www8.cs.umu.se/kurser/5DA001/HT07/lectures/lsq-handouts.pdf
-        
+
         Parameters
         ----------
         x
@@ -249,20 +477,21 @@ class ParametricModelInference:
         vcov
             Variance-covariance matrix of the provided parameters.
         """
-        sig = self.sigma
+        sigma = self.sigma
         H = self.H
 
         # Check if Hessian is invertible else raise error.
         try:
             Hinv = np.linalg.inv(H)
-        except:
-            raise DataDimensionalityWarning("The computed Hessian is not invertible.\
+        except Exception:
+            raise DataDimensionalityWarning(
+                "The computed Hessian is not invertible.\
                     The variance-covariance matrix for the parameters cannot be\
-                    computed.")
-        
-        vcov = (sig ** 2) * Hinv
-        return vcov
+                    computed."
+            )
 
+        vcov = (sigma ** 2) * Hinv
+        return vcov
 
     def get_sd_bf(self):
         """Standard deviation of best-fit parameters.
@@ -278,90 +507,186 @@ class ParametricModelInference:
         sd_bf = np.sqrt(np.diag(vcov))
         return sd_bf
 
+    def _set_parameter_errors(self):
+        """Compute the standard errors of the parameters."""
 
-    def error_propagation(self):
-        """Initializes the ErrorPropagation class with the 
-        info from this model and comptues required properties.
-        """
-        
-        error_prop = ErrorPropagation(
-                func=self.model_function,
-                X=self.X,
-                params=self.estimator.coef_,
-                X_err=None,
-                params_err=self.sd_coef,
-                var_y=self.sigma**2,
-                intercept_=self.estimator.intercept_,                
+        # Compute the Hessian of the loss function.
+        # TODO: For linear and ridge models, implement the closed
+        # form solution for Hessian.
+        self.H = self.get_H(
+            self.loss_function,
+            self.best_fit_params,
+            self.X_train,
+            self.intercept,
+            self.y_train,
+            self.model_kwargs,
+            self.residual_kwargs,
+            self.loss_kwargs,
+        )
+
+        # Get variance-covariance matrix.
+        self.vcov = self.get_vcov()
+        self.sd_coef = self.get_sd_bf()
+
+    def get_parameter_errors(
+        self,
+        distribution="parametric",
+        lsa_assumption=True,
+        confidence_level=90.0,
+        side="two-sided",
+        return_full_distribution=False,
+    ):
+        """Gets model inference for the selected fitted estimator."""
+
+        # Output dataframe.
+        n_features = self.best_fit_params.shape[0]
+
+        means_array = self.best_fit_params.reshape((-1, 1))
+        std_array = self.sd_coef.reshape((-1, 1))
+
+        # Get significance levels and required percentiles.
+        significance_levels = get_significance_levels(confidence_level, side)
+
+        if distribution == "non-parametric":
+            raise NotImplementedError(
+                "Non-parametric distribution of \
+                        of prediction intervals is not yet implemented."
+            )
+        elif distribution == "parametric":
+            interval_array = self._generate_interval_array_parametric(
+                side,
+                lsa_assumption,
+                significance_levels,
+                means_array,
+                std_array,
+                n_features,
             )
 
-        self.error_prop = error_prop
-        self.SE_on_mean = error_prop.SE_on_mean
-        self.SE_prediction = error_prop.SE_prediction
+        # Output dictionary.
+        param_err_dict = {}
+        param_err_dict["mean"] = means_array[:, 0]
+        param_err_dict["std"] = std_array[:, 0]
+        param_err_dict["lower_bound"] = interval_array[:, 0]
+        param_err_dict["upper_bound"] = interval_array[:, 1]
 
-        # We simply assign the function of the error prop class here.
-        self.compute_interval = error_prop.compute_interval
+        # Convert into dataframe
+        param_err_df = pd.DataFrame.from_dict(param_err_dict)
 
+        if return_full_distribution:
+            return param_err_df, means_array, std_array
+        else:
+            return param_err_df
 
-if __name__ == "__main__":
-    
-    import matplotlib.pyplot as plt
-    import pandas as pd
-    import time
+    def _generate_interval_array_parametric(
+        self,
+        side,
+        lsa_assumption,
+        significance_levels,
+        means_array,
+        std_array,
+        n_samples,
+    ):
 
-    from sklearn.datasets import make_regression
-    from sklearn.linear_model._base import LinearRegression
-    from sklearn.linear_model import ElasticNet
+        if lsa_assumption:  # Large-sample approximation is true.
+            z_stats = get_z_values(significance_levels)
+            if side == "two-sided":
+                interval_array = np.concatenate(
+                    (
+                        means_array + z_stats[0] * std_array,
+                        means_array + z_stats[1] * std_array,
+                    ),
+                    axis=1,
+                )
+            elif side == "upper":
+                finite_val_array = means_array + z_stats[0] * std_array
+                inf_array = np.tile(np.float64(np.inf), (n_samples, 1))
+                interval_array = np.concatenate((finite_val_array, inf_array), axis=1)
+            elif side == "lower":
+                finite_val_array = means_array + z_stats[1] * std_array
+                neg_inf_array = np.tile(np.float64(-np.inf), (n_samples, 1))
+                interval_array = np.concatenate(
+                    (neg_inf_array, finite_val_array), axis=1
+                )
+            return interval_array
 
+        else:  # No LSA assumption
+            raise NotImplementedError(
+                "You have chosen to compute \
+                    prediction intervals assuming a non-normal \
+                    parametric model. Prediction intervals for \
+                    such models haven't been implemented. \
+                    Please get the means_array and std_arrays using \
+                    the 'return_all_data' argument and compute the \
+                    intervals by yourself."
+            )
 
-    pd.set_option('display.max_rows', 600)
-    pd.set_option('display.expand_frame_repr', False)
+    def get_intervals(
+        self,
+        X,
+        X_err=None,
+        type_="prediction",
+        distribution="normal",
+        lsa_assumption=True,
+        confidence_level=90.0,
+        side="two-sided",
+        return_full_distribution=False,
+        se=None,
+        dfe=None,
+    ):
 
-    if sys.platform == 'win32':
-        home = 'D:\\'
-    else:
-        home=os.path.expanduser('~')
+        # Check that the parameter SE have been predicted.
+        if not hasattr(self, "sd_coef"):
+            raise ValueError(
+                "SD coefficients have not been predicted.\
+                             Please fit those first using the 'get_paramter_errors' \
+                             function."
+            )
 
-    #plt.style.use(os.path.join(home, "mplstyles", "mypaper.mplstyle"))
+        if dfe is None:
+            dfe = self.error_dof
 
-    np.random.seed(1)
+        error_prop = ErrorPropagation(
+            func=self.model_function,
+            X=X,
+            params=self.estimator.coef_,
+            X_err=X_err,
+            params_err=self.sd_coef,
+            var_y=self.sigma ** 2,
+            intercept_=self.estimator.intercept_,
+        )
 
+        # self.error_prop = error_prop
+        # SE_on_mean = error_prop.SE_on_mean
+        # SE_prediction = error_prop.SE_prediction
 
-    # Create a test case for linear regression and test the inference with
-    # the created class.
-    X, y = make_regression(n_samples=20, n_features=2, n_informative=2, noise=1)
+        y_hat = self.model_function(
+            X, self.best_fit_params, self.intercept, **self.model_kwargs
+        )
 
-    #regr = LinearRegression()
-    regr = ElasticNet(alpha=.010)
+        interval_array = error_prop.compute_interval(
+            type=type_,
+            side=side,
+            confidence_level=confidence_level,
+            distribution=distribution,
+            y_hat=y_hat,
+            se=se,
+            dfe=dfe,
+        )
 
-    regr.fit(X, y)
+        # Update error_propagation code to get standardized intervals.
 
-    regr.coef_
+        # Later, replace this with calculation from this program.
+        means_array = error_prop.y_hat.reshape((-1, 1))
+        std_array = error_prop.SE_prediction.reshape((-1, 1))
 
-    
-    inf = ParametricModelInference()
-    inf.get_model_inference(X, y, estimator=regr)
-    inf.error_propagation()
+        # Output dictionary.
+        pred_dict = {}
+        pred_dict["mean"] = means_array[:, 0]
+        pred_dict["std"] = std_array[:, 0]
+        pred_dict["lower_bound"] = interval_array[0]
+        pred_dict["upper_bound"] = interval_array[1]
 
-    y_hat = inf.error_prop.y_hat #Alternatively, can also be done using sklearn predict
+        # Convert into dataframe
+        pred_df = pd.DataFrame.from_dict(pred_dict)
 
-    intervals = inf.compute_interval(type="prediction", 
-                         side="two-sided", 
-                         confidence_level=90,
-                         distribution="t", 
-                         y_hat=regr.predict(X),  
-                         dfe=X.shape[0]-regr.coef_.shape[0],
-                         )
-    
-    print(f"Hessian matrix: \n {inf.H}")
-    print(f"Hessian matrix inverse: \n {np.linalg.inv(inf.H)}")
-    print(f"Residual: \n {inf.sigma}")
-    print(f"SD coef: \n {inf.sd_coef}")
-
-
-#Make the regression summary table. Find existing methods 
-#Write a file to include tests. Write one with complicated exponential models.
-#or ODEs, log models. 
-#Test 1: types of things
-#Test 2: compare with statsmodels. 
-#Make figures. 
-# %%
+        return pred_df

@@ -83,48 +83,48 @@ class EnsembleModelInference:
             Model using which we wish to compute prediction intervals.
             Must be fitted to data. Of type RandomForestRegression, RandomForestClassification, etc.
         type: str, {"prediction", "confidence"}, default: "prediction"
-            Type of the interval to be computed. 
+            Type of the interval to be computed.
                 Prediction: Refers to the spread of the predicted value. $SE(\hat{\beta})$
                 Confidence: Refers to the spread of the mean of the predicted values. $SE(E(\hat{\beta}))$
         distribution: str, {"non-parametric", "parametric", "default"}, default: "default"
-            Distribution of the interval to be computed. 
+            Distribution of the interval to be computed.
                 If non-parametric, appropriate percentile values are returned.
-                If parametric, normal distribution is assumed (as of this version). 
-                    And appropriate values depending on confidence level are returned.  
+                If parametric, normal distribution is assumed (as of this version).
+                    And appropriate values depending on confidence level are returned.
         lsa_assumption: bool, default=True
-            If distribution of the interval is considered "parametric", 
+            If distribution of the interval is considered "parametric",
             specified is large sample approximation (LSA) can be used to compute the
-            mean and standard deviation. 
+            mean and standard deviation.
             Note: Under LSA, if the number of samples is large enough (typically >=30),
-            the mean of a sample is assumed to be normally 
-             distributed irrespective of the distribution of the sample itself. 
+            the mean of a sample is assumed to be normally
+             distributed irrespective of the distribution of the sample itself.
              See docs for futher details.$
         confidence_level: float, default: 90.0
             Confidence level of the interval desired.
         side: str, {"two-sided", "lower", "upper"}, default: "two-sided"
-            Specifies if the interval desired is 2-sided, upper or lower. 
+            Specifies if the interval desired is 2-sided, upper or lower.
         return_full_distribution: bool, default=False
             Set to True only if special statistics which are not provided here are required.
             If True, returns the full distribution of the predicted data.
-            Returns oob_pred, an array of dimensions 
+            Returns oob_pred, an array of dimensions
                 (n_samples, n_estimators, n_outputs).
-            And n_oob_pred, an array that counts the number of non-nan 
-            values for each sample in each estimator and each output value. 
+            And n_oob_pred, an array that counts the number of non-nan
+            values for each sample in each estimator and each output value.
             For example: If parmetric prediction interval is required with a
-                t-distribution, Poisson distribution, etc., instead of normal 
-                distribution. In this case, set to True, use the oob_pred and 
+                t-distribution, Poisson distribution, etc., instead of normal
+                distribution. In this case, set to True, use the oob_pred and
                 n_oob_pred arrays returned and externally compute required statistics.
-        
+
         Returns
         -------
         feature_imp_int_list: List of dataframes with each dataframe with containing the mean,
             standard deviation, median, and the desired prediction /
             confidence intervals.
         feature_imp_array, n_feature_imp_array: Only if return_full_distribution is True
-            Arrays of shape (n_features, n_estimators, n_outputs) and 
-            (n_features, 1, n_outputs), respectively. 
+            Arrays of shape (n_features, n_estimators, n_outputs) and
+            (n_features, 1, n_outputs), respectively.
             feature_imp_array provides predictions by each tree for each sample at each variable.
-            n_feature_imp_array tracks the number of non-nan values predicted by each estimator at 
+            n_feature_imp_array tracks the number of non-nan values predicted by each estimator at
             each output.
         """
 
@@ -216,8 +216,6 @@ class EnsembleModelInference:
 
             # Convert into dataframe
             feature_imp_int_df = pd.DataFrame.from_dict(feature_imp_int_dict)
-            
-            # Set index as the feature names. If provided in X, store them.
 
             feature_imp_int_list.append(feature_imp_int_df)
 
@@ -226,7 +224,9 @@ class EnsembleModelInference:
             return (
                 feature_imp_int_list,
                 feature_imp_array,
-                n_feature_imp_array
+                n_feature_imp_array,
+                means_array,
+                std_array,
             )
         else:
             return feature_imp_int_list
@@ -417,7 +417,7 @@ class EnsembleModelInference:
         side="two-sided",
         return_full_distribution=False,
     ):
-        """
+        r"""
         Computes intervals for the predictions of the ensemble model.
 
         Parameters
@@ -432,36 +432,36 @@ class EnsembleModelInference:
             only out-of-bag samples are used to compute the prediction
             interval.
         type: str, {"prediction", "confidence"}, default: "prediction"
-            Type of the interval to be computed. 
+            Type of the interval to be computed.
                 Prediction: Refers to the spread of the predicted value. $SE(\hat{y})$
                 Confidence: Refers to the spread of the mean of the predicted values. $SE(E(\hat{y}))$
         distribution: str, {"non-parametric", "parametric", "default"}, default: "default"
-            Distribution of the interval to be computed. 
+            Distribution of the interval to be computed.
                 If non-parametric, appropriate percentile values are returned.
-                If parametric, normal distribution is assumed (as of this version). 
-                    And appropriate values depending on confidence level are returned.  
+                If parametric, normal distribution is assumed (as of this version).
+                    And appropriate values depending on confidence level are returned.
         lsa_assumption: bool, default=True
-            If distribution of the interval is considered "parametric", 
+            If distribution of the interval is considered "parametric",
             specified is large sample approximation (LSA) can be used to compute the
-            mean and standard deviation. 
+            mean and standard deviation.
             Note: Under LSA, if the number of samples is large enough (typically >=30),
-            the mean of a sample is assumed to be normally 
-             distributed irrespective of the distribution of the sample itself. 
+            the mean of a sample is assumed to be normally
+             distributed irrespective of the distribution of the sample itself.
              See docs for futher details.$
         confidence_level: float, default: 90.0
             Confidence level of the interval desired.
         side: str, {"two-sided", "lower", "upper"}, default: "two-sided"
-            Specifies if the interval desired is 2-sided, upper or lower. 
+            Specifies if the interval desired is 2-sided, upper or lower.
         return_full_distribution: bool, default=False
             Set to True only if special statistics which are not provided here are required.
             If True, returns the full distribution of the predicted data.
-            Returns oob_pred, an array of dimensions 
+            Returns oob_pred, an array of dimensions
                 (n_samples, n_estimators, n_outputs).
-            And n_oob_pred, an array that counts the number of non-nan 
-            values for each sample in each estimator and each output value. 
+            And n_oob_pred, an array that counts the number of non-nan
+            values for each sample in each estimator and each output value.
             For example: If parmetric prediction interval is required with a
-                t-distribution, Poisson distribution, etc., instead of normal 
-                distribution. In this case, set to True, use the oob_pred and 
+                t-distribution, Poisson distribution, etc., instead of normal
+                distribution. In this case, set to True, use the oob_pred and
                 n_oob_pred arrays returned and externally compute required statistics.
 
         Returns
@@ -469,12 +469,12 @@ class EnsembleModelInference:
         pred_int_list: List of dataframes with each dataframe containing the mean,
             standard deviation, median, and the desired prediction
             / confidence intervals.
-        
+
         oob_pred, n_oob_pred: Only if return_full_distribution is True
-            Arrays of shape (n_samples, n_estimators, n_outputs) and 
-            (n_samples, 1, n_outputs), respectively. 
+            Arrays of shape (n_samples, n_estimators, n_outputs) and
+            (n_samples, 1, n_outputs), respectively.
             oob_pred provides predictions by each tree for each sample at each variable.
-            n_oob_pred tracks the number of non-nan values predicted by each estimator at 
+            n_oob_pred tracks the number of non-nan values predicted by each estimator at
             each output.
         """
 
@@ -576,6 +576,6 @@ class EnsembleModelInference:
 
         # Return the required things.
         if return_full_distribution:
-            return pred_int_list, oob_pred, n_oob_pred
+            return pred_int_list, oob_pred, n_oob_pred, means_array, std_array
         else:
             return pred_int_list
