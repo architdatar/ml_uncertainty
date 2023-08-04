@@ -460,7 +460,7 @@ class ParametricModelInference:
         return H
 
     def get_vcov(self) -> np.ndarray:
-        """Variance-covariance matrix of parameters.
+        r"""Variance-covariance matrix of parameters.
 
         Estimate variance-covariance matrix of the provided parameters.
         The formula used is $$ D = \sigma^2 (\nabla^2 f(x^*))^{-1}$$ as described in the
@@ -624,6 +624,7 @@ class ParametricModelInference:
         self,
         X,
         X_err=None,
+        X_err_denotes_feature_correlation=False,
         type_="prediction",
         distribution="normal",
         lsa_assumption=True,
@@ -645,48 +646,23 @@ class ParametricModelInference:
         if dfe is None:
             dfe = self.error_dof
 
-        error_prop = ErrorPropagation(
-            func=self.model_function,
+        eprop = ErrorPropagation()
+
+        df_int = eprop.get_intervals(
+            function_=self.model_function,
             X=X,
             params=self.estimator.coef_,
             X_err=X_err,
             params_err=self.sd_coef,
-            var_y=self.sigma ** 2,
-            intercept_=self.estimator.intercept_,
-        )
-
-        # self.error_prop = error_prop
-        # SE_on_mean = error_prop.SE_on_mean
-        # SE_prediction = error_prop.SE_prediction
-
-        y_hat = self.model_function(
-            X, self.best_fit_params, self.intercept, **self.model_kwargs
-        )
-
-        interval_array = error_prop.compute_interval(
-            type=type_,
+            X_err_denotes_feature_correlation=X_err_denotes_feature_correlation,
+            sigma=self.sigma,
+            type_=type_,
             side=side,
             confidence_level=confidence_level,
             distribution=distribution,
-            y_hat=y_hat,
-            se=se,
+            lsa_assumption=lsa_assumption,
             dfe=dfe,
+            model_kwarg_dict=dict(intercept_=self.estimator.intercept_),
         )
 
-        # Update error_propagation code to get standardized intervals.
-
-        # Later, replace this with calculation from this program.
-        means_array = error_prop.y_hat.reshape((-1, 1))
-        std_array = error_prop.SE_prediction.reshape((-1, 1))
-
-        # Output dictionary.
-        pred_dict = {}
-        pred_dict["mean"] = means_array[:, 0]
-        pred_dict["std"] = std_array[:, 0]
-        pred_dict["lower_bound"] = interval_array[0]
-        pred_dict["upper_bound"] = interval_array[1]
-
-        # Convert into dataframe
-        pred_df = pd.DataFrame.from_dict(pred_dict)
-
-        return pred_df
+        return df_int

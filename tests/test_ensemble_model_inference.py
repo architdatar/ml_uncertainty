@@ -2,6 +2,10 @@
 
 """Tests for `ensemble_model_inference` package"""
 
+# TODO: Create tests for other kinds of models such as gradient boosting,
+# and classification models.
+# TODO: Create simulation with R and compare with it for a test case.
+
 import pytest
 import pandas as pd
 from io import StringIO

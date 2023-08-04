@@ -2,11 +2,12 @@
 
 """Tests for `ensemble_model_inference` package"""
 
-import pytest
-import pandas as pd
-from io import StringIO
-import numpy as np
+# TODO: Write tests for custom models and LASSO and ridge
+# TODO: Write tests and create systems to deal with classification models.
+# TODO: Compare with statsmodels
 
+import pytest
+import numpy as np
 from ml_uncertainty.model_inference.parametric_model_inference import (
     ParametricModelInference,
 )
@@ -54,10 +55,6 @@ def test_parameter_errors(model_fit):
 
 def test_confidence_intervals(model_fit):
     """Check if model can compute confidence intervals."""
-
-    # TODO: Set up a more efficient way of doing this test
-    # such that this code does not have to be repeated.
-    # Set up a class.
 
     X, y, regr = model_fit
 

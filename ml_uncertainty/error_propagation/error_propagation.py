@@ -1,9 +1,7 @@
 """
 Defines functions for forward propagation of errors.
 
-# TODO: reorganize code 
-# TODO: write documentation
-# TODO: write tests
+# TODO: reorganize documentation
 """
 
 from typing import Callable
@@ -11,6 +9,7 @@ import autograd.numpy as np
 from autograd import jacobian
 from sklearn.exceptions import DataDimensionalityWarning
 from scipy.stats import norm, t as t_dist
+import pandas as pd
 
 
 def get_significance_levels(confidence_level, side):
@@ -108,19 +107,27 @@ class ErrorPropagation:
 
     """
 
-    def __init__(
+    def __init__(self):
+        """Initialize the function and set parameters as required."""
+
+    def get_intervals(
         self,
-        func: Callable,
+        function_: Callable,
         X,
         params,
-        *args,
         X_err=None,
         params_err=None,
         X_err_denotes_feature_correlation=False,
-        var_y=None,
-        **kwargs
+        sigma=None,
+        type_="confidence",
+        side="two-sided",
+        confidence_level=90.0,
+        distribution="normal",
+        lsa_assumption=True,
+        dfe=None,
+        model_kwarg_dict={},
     ):
-        """
+        r"""
         Parameters
         ----------
         func: Callable
@@ -177,13 +184,13 @@ class ErrorPropagation:
             the residual sum of squares (RSS) is a commonly used estimator.
 
             $$ r = y - \hat{y} $$
-            $$ RSS = \frac{r^Tr}{m-n} $$
+            $$ \sigma^2 = MSE = \frac{r^Tr}{m-n} $$
 
             Alternatively, if there is some prior knowledge / intuition
             about $ \sigma^2 $, it can also be used.
 
             NOTE: var_y is used to compute prediction intervals.
-            If it is not specified, prediction intervals will be computed.
+            If it is not specified, prediction intervals will NOT be computed.
             Only confidence intervals will be computed.
 
             Confidence intervals ~ Interval of mean of the predicted value.
@@ -191,37 +198,169 @@ class ErrorPropagation:
             Prediction intervals ~ Interval of the predicted value.
                     $$ \mathrm{Var}(\hat{y} | \bf{X}, \bm{\beta}) $$
 
+            We know that
+                    $$ \mathrm{Var}(\hat{y} | \bf{X}, \bm{\beta}) =
+                    \mathrm{Var}( \mathbb{E}(\hat{y} | \mathbf{X}, \bm{\beta})) +
+                     \sigma^2 $$
+            So, we need some estimate of $\sigma^2$ to calculate prediction intervals.
+
         *args, **kwargs: Extra args and kwargs to be passed to the function.
 
         """
 
-        self.func = func
-        self.params = self._validate_params(params)
-        self.X = self._validate_X(X)
-
-        self.params_err = self._validate_and_transform_params_err(params_err)
-        self.X_err = self._validate_and_transform_X_err(X_err)
-        self.X_err_denotes_feature_correlation = X_err_denotes_feature_correlation
-
-        self.var_y = var_y
-
-        self.args = args
-        self.kwargs = kwargs
+        # Validate and transform the inputs
+        func, X, params, X_err, params_err = self._validate_and_transform_inputs(
+            function_,
+            X,
+            params,
+            X_err=X_err,
+            params_err=params_err,
+            X_err_denotes_feature_correlation=X_err_denotes_feature_correlation,
+            sigma=sigma,
+            type_=type_,
+            side=side,
+            confidence_level=confidence_level,
+            distribution=distribution,
+            lsa_assumption=lsa_assumption,
+            dfe=dfe,
+        )
 
         # Ensure that the function meets the required demands by
         # computing y_hat. If it raises errors, we can simply stop here.
-        self.y_hat = self._compute_y_hat()
+        y_hat = self._compute_y_hat(func, X, params, model_kwarg_dict)
+
+        # Validate y_hat to make sure that it is a 1-D array
+        self.__validate_y_hat(y_hat, X)
+
+        # Calculate error propagation.
+        SE_on_mean, SE_on_prediction = self._propagate_errors(
+            func, X, params, X_err, params_err, model_kwarg_dict, sigma
+        )
+
+        # Determine appropriate SD and compute interval.
+        if type_ == "confidence":
+            se = SE_on_mean
+        if type_ == "prediction":
+            if SE_on_prediction is None:
+                raise ValueError(
+                    "The prediction error cannot be computed because \
+                        'sigma' was not supplied. This parameter is needed to \
+                        compute prediction intervals. \
+                        Please supply this parameter and recompute.\
+                        Or, please request for confidence intervals instead."
+                )
+            se = SE_on_prediction
+
+        # Computes the required interval.
+        lower_bound, upper_bound = self._compute_intervals(
+            y_hat,
+            se,
+            side=side,
+            confidence_level=confidence_level,
+            lsa_assumption=lsa_assumption,
+            distribution=distribution,
+            dfe=dfe,
+        )
+
+        # Return dataframe.
+        df = pd.DataFrame()
+        df["mean"] = y_hat
+        df["se"] = se
+        df["lower_bound"] = lower_bound
+        df["upper_bound"] = upper_bound
+
+        return df
+
+    def _validate_and_transform_inputs(
+        self,
+        function_,
+        X,
+        params,
+        X_err,
+        params_err,
+        X_err_denotes_feature_correlation,
+        sigma,
+        type_,
+        side,
+        confidence_level,
+        distribution,
+        lsa_assumption,
+        dfe,
+    ):
+        """Validates and transforms inputs for the function"""
+
+        # Validates and transforms the function.
+        # As such, there is nothing to validate, so we simply assign it.
+        func = function_
+
+        # Validates and transforms X.
+        X = self._validate_X(X)
+
+        # Validates and transforms params.
+        params = self._validate_params(params)
+
+        # Validates and transforms params_err and X_err
+        params_err = self._validate_and_transform_params_err(params_err)
+        X_err = self._validate_and_transform_X_err(X_err, X)
 
         # Check that at least one of params_err and X_err is not None
-        if any([self.params_err is not None, self.X_err is not None]):
+        if any([X_err is not None, params_err is not None]):
             pass
         else:
             raise Exception(
-                "At least one of params_err, X_err should be\
-                defined for error propagation."
+                "At least one of X_err, params_err should be supplied\
+                for error propagation."
             )
 
-        self.propagate_errors()
+        # Validates X_err_denotes_feature_correlation
+        assert isinstance(
+            X_err_denotes_feature_correlation, bool
+        ), "X_err_denotes_feature_correlation not of type bool. \
+                Please supply correct value"
+
+        # Validates sigma
+        assert any(
+            [sigma is None, isinstance(sigma, float)]
+        ), "sigma not of type None or float. \
+                Please supply value appropriately."
+
+        # Validates type_
+        assert isinstance(
+            type_, str
+        ), "type_ not of type string. \
+                Please supply appropriately."
+
+        # Validates side
+        assert isinstance(
+            side, str
+        ), "side not of type string. \
+                Please supply appropriately."
+
+        # Validates confidence_level
+        assert isinstance(
+            confidence_level, float
+        ), "confidence_level not of type float. \
+                Please supply appropriately."
+
+        # Validates distribution
+        assert isinstance(
+            distribution, str
+        ), "distribution not of type string. \
+                Please supply appropriately."
+
+        # Validates lsa_assumption
+        assert isinstance(
+            lsa_assumption, bool
+        ), "lsa_assumption not of type bool. \
+            Please supply correct value"
+
+        # Validates dfe
+        assert any(
+            [dfe is None, isinstance(dfe, float)]
+        ), "dfe is not None or float.\
+                   Please supply appropriate values."
+
+        return func, X, params, X_err, params_err
 
     @staticmethod
     def check_type_and_dtype(array):
@@ -304,14 +443,14 @@ class ErrorPropagation:
         else:
             return params_err
 
-    def _validate_and_transform_X_err(self, X_err):
+    def _validate_and_transform_X_err(self, X_err, X):
         """
         Check and validate X_err
         """
 
         if X_err is not None:  # If X_err is not None.
             X_err = self.check_type_and_dtype(X_err)
-            m, n = self.X.shape
+            m, n = X.shape
 
             if X_err.ndim == 1 and X_err.shape[0] == n:
                 # if X_err is a 1-D vector of shape (n,), it means
@@ -352,26 +491,27 @@ class ErrorPropagation:
         else:  # Simple store it as a None object.
             return X_err
 
-    def get_grad_matrix_for_params(
-        self, func=None, X=None, params=None, *args, **kwargs
-    ):
+    def _compute_y_hat(self, func, X, params, model_kwarg_dict):
+        """Computes y_hat for the X, params, args and kwargs provided."""
 
-        if func is None:
-            func = self.func
+        # Get the desired y_hat for the prediction.
+        y_hat = func(X, params, **model_kwarg_dict)
+        return y_hat
 
-        if X is None:
-            X = self.X
+    def __validate_y_hat(self, y_hat, X):
+        """Checks that the supplied y_hat is right."""
 
-        if params is None:
-            params = self.params
+        # Ensure y_hat has the correct dimension.
+        assert y_hat.ndim == 1, "y_hat is not a 1-D vector. Please supply a 1-D vector."
+        assert (
+            y_hat.shape[0] == X.shape[0]
+        ), "Size of y_hat is different from that of X. Please make sure that they match."
 
-        if args == ():
-            args = self.args
+    def get_grad_matrix_for_params(self, func, X, params, model_kwarg_dict):
 
-        if kwargs == {}:
-            kwargs = self.kwargs
-
-        grad_matrix = jacobian(lambda params: func(X, params, *args, **kwargs))(params)
+        grad_matrix = jacobian(lambda params: func(X, params, **model_kwarg_dict))(
+            params
+        )
 
         m = X.shape[0]
         p = params.shape[0]
@@ -382,28 +522,12 @@ class ErrorPropagation:
 
         return grad_matrix
 
-    def get_grad_matrix_for_X(self, func=None, X=None, params=None, *args, **kwargs):
+    def get_grad_matrix_for_X(self, func, X, params, model_kwarg_dict):
         """ """
 
-        if func is None:
-            func = self.func
-
-        if X is None:
-            X = self.X
-
-        if params is None:
-            params = self.params
-
-        if args == ():
-            args = self.args
-
-        if kwargs == {}:
-            kwargs = self.kwargs
-
         m, n = X.shape
-        p = params.shape[0]
 
-        mat = jacobian(lambda X: func(X, params, *args, **kwargs))(X)
+        mat = jacobian(lambda X: func(X, params, **model_kwarg_dict))(X)
 
         # Upon taking the Jacobian,
         # We get a matrix of the shape (m, m, n). This also shows the correlations
@@ -419,18 +543,10 @@ class ErrorPropagation:
 
         return grad_matrix
 
-    def get_variances_based_on_params(
-        self, grad_matrix_for_params=None, params_err=None
-    ):
-        """Computes $ \mathrm{var}(E(y|X,\beta)) $ based on $ \beta $ alone."""
+    def get_variances_based_on_params(self, grad_matrix_for_params, params_err):
+        r"""Computes $ \mathrm{var}(E(y|X,\beta)) $ based on $ \beta $ alone."""
 
-        if grad_matrix_for_params is None:
-            grad_matrix_for_params = self.grad_matrix_for_params
-
-        if params_err is None:
-            params_err = self.params_err
-
-        m = self.X.shape[0]
+        m = grad_matrix_for_params.shape[0]
 
         # Multiply the two.
         mult = grad_matrix_for_params @ params_err @ grad_matrix_for_params.T
@@ -444,15 +560,9 @@ class ErrorPropagation:
 
         return variances_params
 
-    def get_variances_based_on_X(self, grad_matrix_for_X=None, X_err=None):
+    def get_variances_based_on_X(self, grad_matrix_for_X, X_err):
 
-        """Computes the $ \mathrm{var}(E(y|X,\beta)) $ based on $ X $ alone."""
-
-        if grad_matrix_for_X is None:
-            grad_matrix_for_X = self.grad_matrix_for_X
-
-        if X_err is None:
-            X_err = self.X_err
+        r"""Computes the $ \mathrm{var}(E(y|X,\beta)) $ based on $ X $ alone."""
 
         X = self.X
         m = X.shape[0]
@@ -481,76 +591,72 @@ class ErrorPropagation:
 
         return np.array(variances_X)
 
-    def compute_SE_on_mean(self):
-        """computes the standard error of the mean prediction SE(E(y|X, \beta))"""
-
-        # Add all variances and take a square root.
-        if (
-            self.params_err is not None and self.X_err is None
-        ):  # Only error prop from params.
-            SE_on_mean = np.sqrt(self.variances_params)
-        elif (
-            self.params_err is None and self.X_err is not None
-        ):  # Only error prop from X.
-            SE_on_mean = np.sqrt(self.variances_X)
-        elif (
-            self.params_err is not None and self.X_err is not None
-        ):  # Both are present.
-            SE_on_mean = np.sqrt(self.variances_params + self.variances_X)
-
-        self.SE_on_mean = SE_on_mean
-
-    def compute_SE_on_prediction(self):
-        """Uses SE_on_mean to get SE_on_prediciton."""
-
-        if self.var_y is not None:
-            self.SE_prediction = np.sqrt((self.SE_on_mean ** 2 + self.var_y))
-        else:
-            self.SE_prediction = None
-
-    def propagate_errors(self):
+    def _propagate_errors(
+        self, func, X, params, X_err, params_err, model_kwarg_dict, sigma
+    ):
         """This function will perform the computations to compute
         the required properties which can be accessed as required.
         """
 
-        if self.params_err is not None:
-            self.grad_matrix_for_params = self.get_grad_matrix_for_params()
-            self.variances_params = self.get_variances_based_on_params()
+        if X_err is not None:
+            grad_matrix_for_X = self.get_grad_matrix_for_X(
+                func, X, params, model_kwarg_dict
+            )
+            variances_X = self.get_variances_based_on_X(grad_matrix_for_X, X_err)
+        else:
+            variances_X = None
 
-        if self.X_err is not None:
-            self.grad_matrix_for_X = self.get_grad_matrix_for_X()
-            self.variances_X = self.get_variances_based_on_X()
+        if params_err is not None:
+            grad_matrix_for_params = self.get_grad_matrix_for_params(
+                func, X, params, model_kwarg_dict
+            )
+            variances_params = self.get_variances_based_on_params(
+                grad_matrix_for_params, params_err
+            )
+        else:
+            variances_params = None
 
         # Compute the SE on mean.
-        self.compute_SE_on_mean()
+        SE_on_mean = self._compute_SE_on_mean(
+            X_err, params_err, variances_X, variances_params
+        )
 
         # Get prediction intervals.
-        self.compute_SE_on_prediction()
+        SE_on_prediction = self.compute_SE_on_prediction(SE_on_mean, sigma)
 
-    def _compute_y_hat(self):
-        """Computes y_hat for the X, params, args and kwargs provided."""
+        return SE_on_mean, SE_on_prediction
 
-        # Get the desired y_hat for the prediction.
-        y_hat = self.func(self.X, self.params, *self.args, **self.kwargs)
-        return y_hat
+    def _compute_SE_on_mean(self, X_err, params_err, variances_X, variances_params):
+        """computes the standard error of the mean prediction SE(E(y|X, \beta))"""
 
-    def __validate_supplied_y_hat(self, y_hat):
-        """Checks that the supplied y_hat is right."""
+        # Add all variances and take a square root.
+        if params_err is not None and X_err is None:  # Only error prop from params.
+            SE_on_mean = np.sqrt(variances_params)
+        elif params_err is None and X_err is not None:  # Only error prop from X.
+            SE_on_mean = np.sqrt(variances_X)
+        elif params_err is not None and X_err is not None:  # Both are present.
+            SE_on_mean = np.sqrt(variances_params + variances_X)
 
-        # Ensure y_hat has the correct dimension.
-        assert y_hat.ndim == 1, "y_hat is not a 1-D vector. Please supply a 1-D vector."
-        assert (
-            y_hat.shape[0] == self.X.shape[0]
-        ), "Size of y_hat is different from that of X. Please make sure that they match."
+        return SE_on_mean
 
-    def compute_interval(
+    def compute_SE_on_prediction(self, SE_on_mean, sigma):
+        """Uses SE_on_mean to get SE_on_prediciton."""
+
+        if sigma is not None:
+            SE_on_prediction = np.sqrt((SE_on_mean ** 2 + sigma ** 2))
+        else:
+            SE_on_prediction = None
+
+        return SE_on_prediction
+
+    def _compute_intervals(
         self,
-        type="confidence",
+        y_hat,
+        se,
         side="two-sided",
         confidence_level=95.0,
+        lsa_assumption=True,
         distribution="normal",
-        y_hat=None,
-        se=None,
         dfe=None,
     ):
         """Computes the desired confidence / prediction intervals.
@@ -596,27 +702,6 @@ class ErrorPropagation:
         # 3. Gets significance level.
         # 4. Gets appropriate stat based on distribution.
         # 5. Computes the desired confidence interval.
-
-        # Compute y_hat
-        if y_hat is None:
-            y_hat = self.y_hat
-        else:
-            self.__validate_supplied_y_hat(y_hat)
-
-        if not se:
-            # Gets SE for the appropriate interval type.
-            if type == "confidence":
-                se = self.SE_on_mean
-            if type == "prediction":
-                if self.SE_prediction is None:
-                    raise ValueError(
-                        "The prediction error has not been computed.\
-                            This is likely due to the fact the var_y parameter was\
-                            not supplied. Please supply this parameter and recompute.\
-                            Or, please not request for prediction intervals."
-                    )
-
-                se = self.SE_prediction
 
         # Gets significance level.
         significance_levels = get_significance_levels(confidence_level, side)
