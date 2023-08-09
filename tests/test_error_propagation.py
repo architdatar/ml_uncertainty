@@ -6,51 +6,20 @@ import autograd.numpy as np
 import pandas as pd
 from io import StringIO
 from ml_uncertainty.error_propagation.error_propagation import ErrorPropagation
-
-
-def arrhenius_model(T, coefs_):
-    r"""Arrhenius model function
-
-    $$ k = Ae^{-Ea/RT}$$
-
-    Parameters:
-    -----------
-    T: np.ndarray of dimension 1
-        Temperatures in $\degree C$
-    coefs_: np.ndarray of shape (2,)
-        Denotes [A, Ea].
-        A (units: same as those of rate constant k),
-        Ea (units: J/mol).
-
-    Returns:
-    --------
-    np.ndarray of dimension 1.
-        Corresponding to k values for each T value.
-    """
-
-    X = T[:, 0] + 273  # transforming to K
-
-    R = 8.314  # J/mol/K
-    A, Ea = coefs_
-
-    k = A * np.exp(-Ea / (R * X))
-
-    k = k.reshape((-1,))
-
-    return k
+from .arrhenius_model import arrhenius_model, T_expt, fitted_params
 
 
 def test_error_propagation():
     """Tests that errors can be propagated correctly."""
 
-    T = np.array([477, 523, 577, 623]).reshape((-1, 1))
+    T = T_expt.reshape((-1, 1))
 
     # Some parameters and their standard deviations.
     # For reaction from cyclopropane to propene:
     # https://chem.libretexts.org/Bookshelves/Physical_and_Theoretical_Chemistry_Textbook_Maps/Supplemental_Modules_(Physical_and_Theoretical_Chemistry)/Kinetics/06%3A_Modeling_Reaction_Kinetics/6.02%3A_Temperature_Dependence_of_Reaction_Rates/6.2.03%3A_The_Arrhenius_Law/6.2.3.01%3A_Arrhenius_Equation
     # Calculated from math shown in source. Ea: provided, A: calculated accordingly.
     # A: 1/s, Ea: J/mol
-    best_fit_params = np.array([1.39406453358858e15, 271.867e3])
+    best_fit_params = fitted_params
 
     # Let's assume the standard errors in these parameters to be 1% of their
     # value

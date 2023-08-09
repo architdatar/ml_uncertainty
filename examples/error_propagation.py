@@ -40,10 +40,10 @@ def arrhenius_model(T, coefs_):
 # the rate of reaction for conversion of cyclopropane to propene.
 # https://chem.libretexts.org/Bookshelves/Physical_and_Theoretical_Chemistry_Textbook_Maps/Supplemental_Modules_(Physical_and_Theoretical_Chemistry)/Kinetics/06%3A_Modeling_Reaction_Kinetics/6.02%3A_Temperature_Dependence_of_Reaction_Rates/6.2.03%3A_The_Arrhenius_Law/6.2.3.01%3A_Arrhenius_Equation
 
-# The data provided is as follows:
+# The data provided is as follows: ($\degree C$)
 T_expt = np.array([477, 523, 577, 623])
 
-# For these values, the experimental k values are as follows.
+# For these values, the experimental k values are as follows: (1/s)
 k_expt = np.array([0.0018, 0.0027, 0.030, 0.26])
 
 # Let's say the model parameters are calculated

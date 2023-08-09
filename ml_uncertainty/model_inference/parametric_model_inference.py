@@ -25,6 +25,7 @@ from ..error_propagation.error_propagation import (
     get_significance_levels,
     get_z_values,
 )
+from ..non_linear_regression import NonLinearRegression
 
 # Reusing function to check that arrays have the right type and dtype.
 check_type_and_dtype = ErrorPropagation.check_type_and_dtype
@@ -56,6 +57,7 @@ class ParametricModelInference:
         self.__estimators_implemented = [
             sklearn.linear_model._base.LinearRegression,
             sklearn.linear_model._coordinate_descent.ElasticNet,
+            NonLinearRegression
         ]
 
     def set_up_model_inference(
@@ -251,8 +253,7 @@ class ParametricModelInference:
 
         # Get the Jacobian matrix for this model.
         if type(self.estimator) == sklearn.linear_model._base.LinearRegression:
-            if self.estimator.fit_intercept:
-                self.intercept = self.estimator.intercept_
+            self.intercept = self.estimator.intercept_
             self.best_fit_params = self.estimator.coef_
             self.model = linear_model
             self.residual = ordinary_residual
@@ -270,8 +271,7 @@ class ParametricModelInference:
         elif (
             type(self.estimator) == sklearn.linear_model._coordinate_descent.ElasticNet
         ):
-            if self.estimator.fit_intercept:
-                self.intercept = self.estimator.intercept_
+            self.intercept = self.estimator.intercept_
             self.best_fit_params = self.estimator.coef_
             self.model = linear_model
             self.residual = ordinary_residual
@@ -284,6 +284,23 @@ class ParametricModelInference:
 
             self.model_kwargs = dict()
             self.residual_kwargs = dict()
+            self.loss_kwargs = dict()
+        elif (
+            type(self.estimator) == NonLinearRegression
+        ):
+            self.intercept = self.estimator.intercept_ 
+            self.best_fit_params = self.estimator.coef_
+            self.model = self.estimator.model
+            self.residual = self.estimator.residual
+            self.loss = least_squares_loss  # For non-linear, currently, we only support this.
+
+            # Get regularization info.
+            self.regularization = "none"
+            self.l1_penalty = None
+            self.l2_penalty = None
+
+            self.model_kwargs = self.estimator.model_kwargs_dict
+            self.residual_kwargs = self.estimator.residual_kwargs_dict
             self.loss_kwargs = dict()
 
     def _set_model_dof(self):

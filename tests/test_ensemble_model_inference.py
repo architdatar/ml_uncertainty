@@ -9,11 +9,12 @@
 import pytest
 import pandas as pd
 from io import StringIO
-
+import numpy as np
 from ml_uncertainty.model_inference.ensemble_model_inference import (
     EnsembleModelInference,
 )
 
+np.random.seed(1)
 
 # Fit a regression model.
 @pytest.fixture

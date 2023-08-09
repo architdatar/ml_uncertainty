@@ -7,3 +7,4 @@ __version__ = "0.1.0"
 # Import the required subdirectories.
 from . import model_inference
 from . import error_propagation
+from . import non_linear_regression

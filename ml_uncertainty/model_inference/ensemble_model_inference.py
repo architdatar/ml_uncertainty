@@ -1,5 +1,18 @@
-"""
+r"""
 Develops utlities to get model inference for tree-based models in scikit-learn.
+
+# TODO: Create tests for model significance. Basically: is it better than 
+    the null model? 
+        1. Look at non-parametric course textbook and see which tests can
+        be used for this. Non-parametric version of F-test. 
+        2. Degrees of freedom of non-parametric models. The MC algorithm for 
+        this has been discussed in DOI: 10.1080/01621459.1998.10474094. Full paper
+        can be accessed from virtual library -> Reprints Desk. 
+        Algorithm to do so is mentioned in Pg 122, algorithm 1
+            1. Basic idea of the method is to create t perturbations in Y and 
+            measure the efects on $\hat{y}$. 
+        Results can be compared with URL: https://arxiv.org/pdf/1911.00190.pdf
+        Pg 11 and 12. 
 """
 
 # Imports
@@ -81,7 +94,8 @@ class EnsembleModelInference:
         ----------
         estimator : scikit-learn ensemble model (fitted)
             Model using which we wish to compute prediction intervals.
-            Must be fitted to data. Of type RandomForestRegression, RandomForestClassification, etc.
+            Must be fitted to data. Of type RandomForestRegression, 
+            RandomForestClassification, etc.
         type: str, {"prediction", "confidence"}, default: "prediction"
             Type of the interval to be computed.
                 Prediction: Refers to the spread of the predicted value. $SE(\hat{\beta})$
