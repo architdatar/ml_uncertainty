@@ -14,7 +14,7 @@ np.random.seed(1)
 
 # Create a test case for elastic net regression and test the inference with
 # the created class.
-X, y = make_regression(n_samples=20, n_features=5, n_informative=0, noise=10)
+X, y = make_regression(n_samples=20, n_features=5, n_informative=1, noise=10)
 
 regr = ElasticNet(alpha=0.01, l1_ratio=0.5)
 

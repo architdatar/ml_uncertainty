@@ -94,7 +94,7 @@ class EnsembleModelInference:
         ----------
         estimator : scikit-learn ensemble model (fitted)
             Model using which we wish to compute prediction intervals.
-            Must be fitted to data. Of type RandomForestRegression, 
+            Must be fitted to data. Of type RandomForestRegression,
             RandomForestClassification, etc.
         type: str, {"prediction", "confidence"}, default: "prediction"
             Type of the interval to be computed.

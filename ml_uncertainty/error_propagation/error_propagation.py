@@ -356,8 +356,8 @@ class ErrorPropagation:
 
         # Validates dfe
         assert any(
-            [dfe is None, isinstance(dfe, float)]
-        ), "dfe is not None or float.\
+            [dfe is None, isinstance(dfe, float), isinstance(dfe, int)]
+        ), "dfe is not None, float, or int.\
                    Please supply appropriate values."
 
         return func, X, params, X_err, params_err

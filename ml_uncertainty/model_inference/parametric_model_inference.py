@@ -9,6 +9,9 @@ DOF calculation: Talk by Hui Zou (https://hastie.su.domains/TALKS/enet_talk.pdf)
 5. Compare with statsmodels.
 
 # TODO: Write proper documentation.
+# TODO: Enable t-tests, and other non-parametric tests for cases where
+        large sample approximation does not hold.
+# TODO: Enable model signficance tests.        
 """
 
 import autograd.numpy as np
@@ -57,7 +60,7 @@ class ParametricModelInference:
         self.__estimators_implemented = [
             sklearn.linear_model._base.LinearRegression,
             sklearn.linear_model._coordinate_descent.ElasticNet,
-            NonLinearRegression
+            NonLinearRegression,
         ]
 
     def set_up_model_inference(
@@ -118,24 +121,18 @@ class ParametricModelInference:
         # Compute parameter standard deviations.
         self._set_parameter_errors()
 
-    def model_function(self, X, coefs_, intercept_, **model_kwargs):
-        return self.model(X, coefs_, intercept_, **model_kwargs)
+    def model_function(self, X, coefs_, **model_kwargs):
+        return self.model(X, coefs_, **model_kwargs)
 
-    def residual_function(
-        self, X, coefs_, intercept_, y, model_kwargs, **residual_kwargs
-    ):
+    def residual_function(self, X, coefs_, y, model_kwargs, **residual_kwargs):
         """ """
-        y_pred = self.model_function(
-            X=X, coefs_=coefs_, intercept_=intercept_, **model_kwargs
-        )
+        y_pred = self.model_function(X=X, coefs_=coefs_, **model_kwargs)
         return self.residual(y_pred, y, **residual_kwargs)
 
-    def loss_function(
-        self, X, coefs_, intercept_, y, model_kwargs, residual_kwargs, **loss_kwargs
-    ):
+    def loss_function(self, X, coefs_, y, model_kwargs, residual_kwargs, **loss_kwargs):
         """ """
         residuals = self.residual_function(
-            X, coefs_, intercept_, y, model_kwargs, **residual_kwargs
+            X, coefs_, y, model_kwargs, **residual_kwargs
         )
 
         loss_term = self.loss(residuals)
@@ -264,7 +261,7 @@ class ParametricModelInference:
             self.l1_penalty = None
             self.l2_penalty = None
 
-            self.model_kwargs = dict()
+            self.model_kwargs = dict(intercept_=self.intercept)
             self.residual_kwargs = dict()
             self.loss_kwargs = dict()
 
@@ -282,17 +279,17 @@ class ParametricModelInference:
             self.l1_penalty = self.estimator.alpha * self.estimator.l1_ratio
             self.l2_penalty = 0.5 * self.estimator.alpha * (1 - self.estimator.l1_ratio)
 
-            self.model_kwargs = dict()
+            self.model_kwargs = dict(intercept_=self.intercept)
             self.residual_kwargs = dict()
             self.loss_kwargs = dict()
-        elif (
-            type(self.estimator) == NonLinearRegression
-        ):
-            self.intercept = self.estimator.intercept_ 
+        elif type(self.estimator) == NonLinearRegression:
+            self.intercept = self.estimator.intercept_
             self.best_fit_params = self.estimator.coef_
             self.model = self.estimator.model
             self.residual = self.estimator.residual
-            self.loss = least_squares_loss  # For non-linear, currently, we only support this.
+            self.loss = (
+                least_squares_loss  # For non-linear, currently, we only support this.
+            )
 
             # Get regularization info.
             self.regularization = "none"
@@ -372,7 +369,6 @@ class ParametricModelInference:
         res = self.residual_function(
             self.X_train,
             self.best_fit_params,
-            self.intercept,
             self.y_train,
             self.model_kwargs,
             **self.residual_kwargs,
@@ -393,7 +389,6 @@ class ParametricModelInference:
         residual_function,
         best_fit_params,
         X,
-        intercept_,
         y,
         model_kwargs,
         residual_kwargs,
@@ -418,7 +413,7 @@ class ParametricModelInference:
 
         J = jacobian(
             lambda coefs_: residual_function(
-                X, coefs_, intercept_, y, model_kwargs, **residual_kwargs
+                X, coefs_, y, model_kwargs, **residual_kwargs
             )
         )(coefs_)
         return J
@@ -428,7 +423,6 @@ class ParametricModelInference:
         loss_function,
         best_fit_params,
         X,
-        intercept_,
         y,
         model_kwargs,
         residual_kwargs,
@@ -456,7 +450,6 @@ class ParametricModelInference:
                 lambda coefs_: loss_function(
                     X,
                     coefs_,
-                    intercept_,
                     y,
                     model_kwargs,
                     residual_kwargs,
@@ -534,7 +527,6 @@ class ParametricModelInference:
             self.loss_function,
             self.best_fit_params,
             self.X_train,
-            self.intercept,
             self.y_train,
             self.model_kwargs,
             self.residual_kwargs,
@@ -647,8 +639,6 @@ class ParametricModelInference:
         lsa_assumption=True,
         confidence_level=90.0,
         side="two-sided",
-        return_full_distribution=False,
-        se=None,
         dfe=None,
     ):
 
@@ -679,7 +669,7 @@ class ParametricModelInference:
             distribution=distribution,
             lsa_assumption=lsa_assumption,
             dfe=dfe,
-            model_kwarg_dict=dict(intercept_=self.estimator.intercept_),
+            model_kwarg_dict=self.model_kwargs,
         )
 
         return df_int
