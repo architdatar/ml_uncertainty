@@ -1,94 +1,14 @@
 """
 Defines functions for forward propagation of errors.
-
-# TODO: reorganize documentation
 """
 
 from typing import Callable
 import autograd.numpy as np
 from autograd import jacobian
 from sklearn.exceptions import DataDimensionalityWarning
-from scipy.stats import norm, t as t_dist
 import pandas as pd
-
-
-def get_significance_levels(confidence_level, side):
-    """Computes the significance level for the given side
-
-    Effectively, returns the percentiles of the distributions which we wish to
-    evaluate.
-
-    In other words, it is the stat at which the percent of distribution
-    less than the desired value is the desired probability.
-
-    Examples:
-    --------
-    1. For a 2-sided 90% confidence interval, we would wish to obtain the stats
-        x1* and x2* such that P(x1* < x < x2*) = 90%..
-        Considering a symmetric distribution: we would want
-        P(x < x1*) = 5% and P(x > x2*) = 5% => P(x < x2*) = 95%
-    2. For a lower 90%, we would wish to obtain the stat
-        x* such that P(x >= x*) = 90%, alternatively, P(x < x*) = 10%
-    3. For upper 90% CI, we would wish to obtain the stat
-        x* such that P(x < x*) = 90%
-
-    """
-
-    if side == "two-sided":
-        significance_levels = [
-            (1 - confidence_level / 100) / 2,
-            1 - (1 - confidence_level / 100) / 2,
-        ]
-    elif side == "upper":
-        significance_levels = [1 - confidence_level / 100, None]
-    elif side == "lower":
-        significance_levels = [None, confidence_level / 100]
-    else:
-        raise ValueError(
-            "Side should be one of \
-            two-sided, lower, and upper. Please provided one of these."
-        )
-
-    return significance_levels
-
-
-def get_z_values(significance_levels):
-    # Gets z values for the required significance_levels
-    z_values = []
-    for level in significance_levels:
-        if level is None:
-            z_values.append(None)
-        else:
-            stat = norm.ppf(level)
-            z_values.append(stat)
-
-    return z_values
-
-
-def get_t_values(significance_levels, dfe):
-    """Computes t values"""
-
-    if not dfe:
-        # dfe is not supplied.
-        raise ValueError(
-            "dfe is not supplied\
-                due to which t-stats cannot be computed.\
-                If you wish to make a large sample approximation (LSA)\
-                that your sample standard deviation is based on enough samples to\
-                be close to the population standard deviation, you may consider using\
-                the normal distribution instead."
-        )
-    else:
-        # For each level: get the desired t-stat.
-        t_values = []
-        for level in significance_levels:
-            if level is None:
-                t_values.append(None)
-            else:
-                stat = t_dist.ppf(q=level, df=dfe)
-                t_values.append(stat)
-
-        return t_values
+from .statistical_utils import get_significance_levels, get_z_values, get_t_values
+from copy import deepcopy
 
 
 class ErrorPropagation:
@@ -98,8 +18,8 @@ class ErrorPropagation:
 
     Given $ y = f(\bf{X}, \bf{\beta})  $, computes
 
-    $$ (\delta y) = (\delta f(\bf{X}, \bf{\beta})) $$
-    $$ = \sqrt{(\nabla_{\textbf{X}}f) \delta\textbf{X} (\nabla_{\textbf{X}}f)^T  +
+    $$ \delta y = \delta f(\bf{X}, \bf{\beta}) $$
+    $$ \delta y= \sqrt{(\nabla_{\textbf{X}}f) \delta\textbf{X} (\nabla_{\textbf{X}}f)^T  +
         (\nabla_{\bm{\beta}}f) \delta\bm{\beta} (\nabla_{\bm{\beta}}f)^T} $$
 
     Assumptions:
@@ -126,6 +46,7 @@ class ErrorPropagation:
         lsa_assumption=True,
         dfe=None,
         model_kwarg_dict={},
+        center_X=True,
     ):
         r"""
         Parameters
@@ -234,7 +155,7 @@ class ErrorPropagation:
 
         # Calculate error propagation.
         SE_on_mean, SE_on_prediction = self._propagate_errors(
-            func, X, params, X_err, params_err, model_kwarg_dict, sigma
+            func, X, params, X_err, params_err, model_kwarg_dict, sigma, center_X
         )
 
         # Determine appropriate SD and compute interval.
@@ -592,11 +513,22 @@ class ErrorPropagation:
         return np.array(variances_X)
 
     def _propagate_errors(
-        self, func, X, params, X_err, params_err, model_kwarg_dict, sigma
+        self, func, X, params, X_err, params_err, model_kwarg_dict, sigma, center_X
     ):
         """This function will perform the computations to compute
         the required properties which can be accessed as required.
         """
+
+        # If X needs to be centerd, it will be centered here.
+        # For this operation, it is important that X and params be centered
+        # on the 1st axis. For params, this is not an issue since they
+        # are 1-D vectors by definition. But, X needs to be centered or else
+        # we get messed up answers. If X is externally centered, the user may
+        # pass the argument as center_X = False, but in general, this is not recommended.
+        # Source: https://www.stat.cmu.edu/~cshalizi/36-220/lecture-11.pdf
+        if center_X:
+            X = deepcopy(X)
+            X = X - X.mean(axis=0)
 
         if X_err is not None:
             grad_matrix_for_X = self.get_grad_matrix_for_X(
@@ -607,6 +539,7 @@ class ErrorPropagation:
             variances_X = None
 
         if params_err is not None:
+
             grad_matrix_for_params = self.get_grad_matrix_for_params(
                 func, X, params, model_kwarg_dict
             )
@@ -695,13 +628,6 @@ class ErrorPropagation:
         list of 2 arrays each of shape (m,) containing the lower and upper bounds of the
         desired interval
         """
-
-        # Workflow: Compute confidence intervals.
-        # 1. Gets y_hat for the prediction.
-        # 2. Gets SE for the appropriate interval based on type.
-        # 3. Gets significance level.
-        # 4. Gets appropriate stat based on distribution.
-        # 5. Computes the desired confidence interval.
 
         # Gets significance level.
         significance_levels = get_significance_levels(confidence_level, side)

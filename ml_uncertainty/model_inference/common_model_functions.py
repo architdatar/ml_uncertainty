@@ -15,7 +15,8 @@ def ordinary_residual(y_pred, y):
 
 
 def least_squares_loss(residuals):
-    loss = 1 / (2 * residuals.shape[0]) * (residuals @ residuals)
+    # loss = 1 / (2 * residuals.shape[0]) * (residuals @ residuals)
+    loss = 1 / 2 * residuals @ residuals
     return loss
 
 

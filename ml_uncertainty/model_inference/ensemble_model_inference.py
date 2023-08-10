@@ -26,7 +26,7 @@ from sklearn.ensemble._forest import (
 from warnings import warn
 import pandas as pd
 from sklearn.exceptions import DataDimensionalityWarning
-from ..error_propagation.error_propagation import (
+from ..error_propagation.statistical_utils import (
     get_significance_levels,
     get_z_values,
 )

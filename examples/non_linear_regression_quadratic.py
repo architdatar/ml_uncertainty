@@ -14,6 +14,7 @@ import pandas as pd
 
 np.random.seed(1)
 
+
 # Say we have a model of the form.
 def model(X, params):
     r"""Model of the form: $ y = \beta_0 + \beta_1 X + \beta_2 X^2 $
@@ -79,8 +80,6 @@ plt.legend(loc="lower right")
 
 #%%
 # Model inference
-
-# Model inference
 inf = ParametricModelInference()
 
 inf.set_up_model_inference(X_train=X_expt, y_train=y_expt, estimator=nlr)
@@ -101,8 +100,8 @@ display(df_param)
 
 # Plot the prediction intervals.
 plt.figure()
-plt.xlabel(r"x")
-plt.ylabel(r"y")
+plt.xlabel("x")
+plt.ylabel("y")
 plt.title("NLR fit illustration with 90% prediction intervals")
 
 # Showing experimental points and predicted points.

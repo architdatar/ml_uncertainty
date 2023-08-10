@@ -24,7 +24,7 @@ import sklearn
 from sklearn.exceptions import DataDimensionalityWarning
 from ..error_propagation.error_propagation import ErrorPropagation
 from .common_model_functions import linear_model, ordinary_residual, least_squares_loss
-from ..error_propagation.error_propagation import (
+from ..error_propagation.statistical_utils import (
     get_significance_levels,
     get_z_values,
 )
@@ -338,8 +338,9 @@ class ParametricModelInference:
                 model_dof = (d_values ** 2 / (d_values ** 2 + l2_penalty)).sum()
 
         # The intercept value is not penalized during regularization.
-        # So, it should be added as +1 to the model degrees of freedom.
-        if intercept is not None:
+        # So, it should be added as +1 to the model degrees of freedom if it is
+        # part of the model kwargs.
+        if intercept in self.model_kwargs.keys() and intercept is not None:
             model_dof += 1
 
         # Set model dof.
@@ -430,7 +431,7 @@ class ParametricModelInference:
     ) -> np.ndarray:
         """Hessian of objective function.
 
-        Hessian of the objective function is the Jacboian of the gradient
+        Hessian of the objective function is the Jacobian of the gradient
         of the objective funciton.
 
         Parameters
@@ -617,8 +618,7 @@ class ParametricModelInference:
                     (neg_inf_array, finite_val_array), axis=1
                 )
             return interval_array
-
-        else:  # No LSA assumption
+        else:  # No LSA assumption, hence, use t test.
             raise NotImplementedError(
                 "You have chosen to compute \
                     prediction intervals assuming a non-normal \
@@ -640,6 +640,7 @@ class ParametricModelInference:
         confidence_level=90.0,
         side="two-sided",
         dfe=None,
+        center_X=True,
     ):
 
         # Check that the parameter SE have been predicted.
@@ -670,6 +671,7 @@ class ParametricModelInference:
             lsa_assumption=lsa_assumption,
             dfe=dfe,
             model_kwarg_dict=self.model_kwargs,
+            center_X=center_X,
         )
 
         return df_int
