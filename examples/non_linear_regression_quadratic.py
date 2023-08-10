@@ -33,13 +33,14 @@ def model(X, params):
 
 
 # Generate X and y data.
-X_expt = np.linspace(0, 10, 100).reshape((-1, 1))
+# X_expt = np.linspace(0, 10, 100).reshape((-1, 1))
+X_expt = np.linspace(1, 10, 100).reshape((-1, 1))
 
 # Let's say the true parameters for this experiment are as follows.
 true_params = np.array([1.0, 1.0, 1.0])
 
 # Generate y data by adding some random noise with $\Var(\epsilon) = 1$.
-y_expt = model(X_expt, true_params) + np.random.normal(0, 1, size=X_expt.shape[0])
+y_expt = model(X_expt, true_params) + np.random.normal(0, 10, size=X_expt.shape[0])
 
 #%%
 # Non-linear regression.
@@ -119,3 +120,5 @@ plt.fill_between(
 )
 
 plt.legend(loc="lower right")
+
+# %%

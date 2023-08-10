@@ -133,7 +133,7 @@ inf.set_up_model_inference(X_train=T_expt_mat, y_train=k_expt, estimator=nlr)
 df_feature_imp = inf.get_parameter_errors()
 
 # Compute confidence intervals for new T values.
-T_new = np.linspace(T_expt.min(), T_expt.max(), 5).reshape((-1, 1))
+T_new = np.linspace(T_expt.min(), T_expt.max(), 50).reshape((-1, 1))
 
 k_new = nlr.predict(T_new)
 
@@ -168,27 +168,22 @@ plt.scatter(
     T_expt, k_true_pred, marker="o", color="green", zorder=0.7, label="'True' params"
 )
 
-# Show 90% prediction intervals.
-# Show the predicted values and their prediction intervals.
-plt.errorbar(
+plt.plot(T_new[:, 0], df_int["mean"], lw=4, color="blue", zorder=0.5)
+
+plt.fill_between(
     T_new[:, 0],
-    df_int["mean"],
-    yerr=(
-        df_int["mean"] - df_int["lower_bound"],
-        df_int["upper_bound"] - df_int["mean"],
-    ),
-    marker="o",
-    markersize="8",
-    ls="none",
-    zorder=0.3,
+    df_int["lower_bound"],
+    df_int["upper_bound"],
     color="blue",
+    alpha=0.2,
+    zorder=0,
 )
 
 plt.legend(loc="lower right")
 
 r"""
 Closing comments: 
-1. We can see here that the model errors are really large. 
+1. We can see here that the prediction intervals are really large. 
 This is expected since the error degree of freedom is 1. 
 Had we had more points, we would have had more clarity.
 2. The discrepancy between the parameters we obtained and those
@@ -196,4 +191,8 @@ obtained by the authors of the source was due to the fact they linearized
 the model while fitting it. This can sometimes be a handy trick,
 but special care should be taken about the distributions from which the 
 data points are drawn during the transformation.
+Since they log-transformed the data, they tend to fit to the lower k region
+while we tend to fit to the higher k region. We can see that in the fit.
 """
+
+# %%

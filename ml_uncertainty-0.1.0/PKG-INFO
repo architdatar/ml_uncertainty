@@ -1,0 +1,71 @@
+Metadata-Version: 2.1
+Name: ml_uncertainty
+Version: 0.1.0
+Summary: Uncertainty quantification and model inference for machine learning models
+Home-page: https://github.com/architdatar/ml_uncertainty
+Author: Archit Nikhil Datar
+Author-email: architdatar@gmail.com
+License: MIT license
+Keywords: ml_uncertainty
+Platform: UNKNOWN
+Classifier: Development Status :: 2 - Pre-Alpha
+Classifier: Intended Audience :: Developers
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Natural Language :: English
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.6
+Classifier: Programming Language :: Python :: 3.7
+Classifier: Programming Language :: Python :: 3.8
+Requires-Python: >=3.6
+License-File: LICENSE
+License-File: AUTHORS.rst
+
+=============================
+ML Uncertainty Quantification
+=============================
+
+
+.. image:: https://img.shields.io/pypi/v/ml_uncertainty.svg
+        :target: https://pypi.python.org/pypi/ml_uncertainty
+
+.. image:: https://img.shields.io/travis/architdatar/ml_uncertainty.svg
+        :target: https://travis-ci.com/architdatar/ml_uncertainty
+
+.. image:: https://readthedocs.org/projects/ml-uncertainty/badge/?version=latest
+        :target: https://ml-uncertainty.readthedocs.io/en/latest/?version=latest
+        :alt: Documentation Status
+
+
+
+
+Uncertainty quantification and model inference for machine learning models
+
+
+* Free software: MIT license
+* Documentation: https://ml-uncertainty.readthedocs.io.
+
+
+Features
+--------
+
+* TODO
+
+Credits
+-------
+
+This package was created with Cookiecutter_ and the `audreyr/cookiecutter-pypackage`_ project template.
+
+.. _Cookiecutter: https://github.com/audreyr/cookiecutter
+.. _`audreyr/cookiecutter-pypackage`: https://github.com/audreyr/cookiecutter-pypackage
+
+
+=======
+History
+=======
+
+0.1.0 (2023-07-13)
+------------------
+
+* First release on PyPI.
+
+

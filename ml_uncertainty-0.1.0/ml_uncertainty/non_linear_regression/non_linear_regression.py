@@ -126,7 +126,7 @@ class NonLinearRegression(RegressorMixin, BaseEstimator):
             self._validate_y(sample_weight)
 
         # Here, we first set the intercept as done in sklearn functions
-        # If it is provided either through the model or through kwargs,
+        # If it is provided either through the model or through kwargs, 
         # it is set to that value. Else, it is set to 0.
         self._set_intercept()
 

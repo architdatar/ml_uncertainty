@@ -16,7 +16,6 @@ DOF calculation: Talk by Hui Zou (https://hastie.su.domains/TALKS/enet_talk.pdf)
 """
 
 import autograd.numpy as np
-
 # import numpy as np
 from autograd import jacobian
 from autograd import elementwise_grad as egrad
@@ -86,9 +85,9 @@ class ParametricModelInference:
 
         Parameters
         ----------
-        y_train_weights:
+        y_train_weights: 
             NOTE: If this is not set to None, to get accurate results,
-            you must set up the loss function correctly. Please refer
+            you must set up the loss function correctly. Please refer 
             to the example examples/weighted_least_squares_regression.
         """
 
@@ -557,33 +556,29 @@ class ParametricModelInference:
                 of prediction intervals is not yet implemented."
             )
         elif distribution == "parametric":
-            # We choose what kind of interval we wish to
-            # compute. Thsi is equivalent to the 'distribution' argument in
-            # error_propagation. But, we refrain from using that here to
+            # We choose what kind of interval we wish to 
+            # compute. Thsi is equivalent to the 'distribution' argument in 
+            # error_propagation. But, we refrain from using that here to 
             # avoid confusion. Instead, we use "interval_stat". So,
-            # if it is not specifically mentioned, we use 'normal' if LSA is
+            # if it is not specifically mentioned, we use 'normal' if LSA is 
             # taken to be true, else we use "t" test.
 
             if lsa_assumption:
                 interval_stat = "normal"
             else:
                 interval_stat = "t"
-
-            interval_array = compute_intervals(
-                means_array,
-                std_array,
-                side=side,
-                confidence_level=confidence_level,
-                distribution=interval_stat,
-                dfe=self.error_dof,
-            )
-
+            
+            interval_array = compute_intervals(means_array, 
+                                               std_array,
+                                               side=side,
+                                               confidence_level=confidence_level,
+                                               distribution=interval_stat,
+                                               dfe=self.error_dof)
+            
         else:
-            raise NotImplementedError(
-                "'distribution' argument not permissible. \
+            raise NotImplementedError("'distribution' argument not permissible. \
                                       Please provde it as 'parameteric' or\
-                                      'non-parametric'."
-            )
+                                      'non-parametric'.")
 
         # Output dictionary.
         param_err_dict = {}

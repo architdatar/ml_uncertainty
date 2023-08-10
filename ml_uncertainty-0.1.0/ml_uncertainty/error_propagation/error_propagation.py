@@ -174,14 +174,14 @@ class ErrorPropagation:
 
         # If LSA assumption is true, we need not compute the t distribution
         # since it required model degrees of freedom which we may not always have.
-        # Thus, if distribution is set to "None", we select which one to use
+        # Thus, if distribution is set to "None", we select which one to use 
         # considering LSA assumption.
         if distribution is None:
             if lsa_assumption:
                 distribution = "normal"
             else:
                 distribution = "t"
-
+    
         # Computes the required interval.
         lower_bound, upper_bound = compute_intervals(
             y_hat,
@@ -273,9 +273,8 @@ class ErrorPropagation:
                 Please supply appropriately."
 
         # Validates distribution
-        assert any(
-            [isinstance(distribution, str), distribution is None]
-        ), "distribution not of type string.\
+        assert any([isinstance(distribution, str),
+                   distribution is None]), "distribution not of type string.\
                 Please supply appropriately."
 
         # Validates lsa_assumption
