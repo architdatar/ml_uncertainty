@@ -47,6 +47,7 @@ class ErrorPropagation:
         dfe=None,
         model_kwarg_dict={},
         center_X=True,
+        center_X_value="infer_from_X",
     ):
         r"""
         Parameters

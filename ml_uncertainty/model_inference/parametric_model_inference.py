@@ -643,6 +643,7 @@ class ParametricModelInference:
             dfe=dfe,
             model_kwarg_dict=self.model_kwargs,
             center_X=center_X,
+            center_X_value=self.X_train.mean(axis=0),
         )
 
         return df_int
