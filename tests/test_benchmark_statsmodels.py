@@ -41,9 +41,6 @@ def test_1D():
 
     nlr.fit(X_expt, y_expt)
 
-    # Predicted with fitted parameters.
-    y_pred = nlr.predict(X_expt)
-
     inf = ParametricModelInference()
 
     inf.set_up_model_inference(X_expt, y_expt, nlr)
@@ -101,9 +98,6 @@ def test_2D():
     nlr = NonLinearRegression(model=linear_model, p0_length=true_params.shape[0])
 
     nlr.fit(X_expt, y_expt)
-
-    # Predicted with fitted parameters.
-    y_pred = nlr.predict(X_expt)
 
     inf = ParametricModelInference()
 

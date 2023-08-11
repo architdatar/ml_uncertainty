@@ -12,6 +12,8 @@ from copy import deepcopy
 
 # TODO: Write proper validation for center X and center X value.
 # TODO: Write proper documentation.
+# TODO: For inputs with weights, adjust prediction intervals accordingly.
+# Instead of $\sigma$, use $\sigma_i$
 
 
 class ErrorPropagation:
@@ -28,6 +30,8 @@ class ErrorPropagation:
     Assumptions:
     1. All samples in X are i.i.d. (i.e., uncorrelated)
 
+    References:
+    1.https://www.stat.cmu.edu/~cshalizi/36-220/lecture-11.pdf
     """
 
     def __init__(self):
@@ -49,8 +53,6 @@ class ErrorPropagation:
         lsa_assumption=False,
         dfe=None,
         model_kwarg_dict={},
-        center_X=True,
-        X_mean_value="infer_from_X",
     ):
         r"""
         Parameters
@@ -166,8 +168,6 @@ class ErrorPropagation:
             params_err,
             model_kwarg_dict,
             sigma,
-            center_X,
-            X_mean_value,
         )
 
         # Determine appropriate SD and compute interval.
@@ -542,30 +542,10 @@ class ErrorPropagation:
         params_err,
         model_kwarg_dict,
         sigma,
-        center_X,
-        X_mean_value,
     ):
         """This function will perform the computations to compute
         the required properties which can be accessed as required.
         """
-
-        # If X needs to be centerd, it will be centered here.
-        # For this operation, it is important that X and params be centered
-        # on the 1st axis. For params, this is not an issue since they
-        # are 1-D vectors by definition. But, X needs to be centered or else
-        # we get messed up answers. If X is externally centered, the user may
-        # pass the argument as center_X = False, but in general, this is not recommended.
-        # Source: https://www.stat.cmu.edu/~cshalizi/36-220/lecture-11.pdf
-        if center_X:
-            X = deepcopy(X)
-            if type(X_mean_value) == str:
-                if X_mean_value == "infer_from_X":
-                    X = X - X.mean(axis=0)
-                else:
-                    raise ValueError("Invalid argument for X_mean_value. \
-                                     Please see docs.")
-            else:
-                X = X - X_mean_value
 
         if X_err is not None:
             grad_matrix_for_X = self.get_grad_matrix_for_X(
@@ -583,6 +563,7 @@ class ErrorPropagation:
             variances_params = self.get_variances_based_on_params(
                 grad_matrix_for_params, params_err
             )
+
         else:
             variances_params = None
 

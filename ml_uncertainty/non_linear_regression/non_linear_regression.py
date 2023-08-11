@@ -10,6 +10,8 @@ Future:
     inference)
 """
 
+# TODO: Add and benchmark WLS case
+
 import numpy as np
 from sklearn.base import BaseEstimator, RegressorMixin
 from scipy.optimize import least_squares

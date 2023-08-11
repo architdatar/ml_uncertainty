@@ -611,7 +611,6 @@ class ParametricModelInference:
         confidence_level=90.0,
         side="two-sided",
         dfe=None,
-        center_X=True,
     ):
 
         # Check that the parameter SE have been predicted.
@@ -632,7 +631,7 @@ class ParametricModelInference:
             X=X,
             params=self.estimator.coef_,
             X_err=X_err,
-            params_err=self.sd_coef,
+            params_err=self.vcov,
             X_err_denotes_feature_correlation=X_err_denotes_feature_correlation,
             sigma=self.sigma,
             type_=type_,
@@ -642,8 +641,6 @@ class ParametricModelInference:
             lsa_assumption=lsa_assumption,
             dfe=dfe,
             model_kwarg_dict=self.model_kwargs,
-            center_X=center_X,
-            X_mean_value=self.X_train.mean(axis=0),
         )
 
         return df_int
