@@ -143,7 +143,10 @@ The `EnsembleModelInference` does not have a code to benchmark it against to the
 Credits
 -------
 
-This package was created with Cookiecutter_ and the `audreyr/cookiecutter-pypackage`_ project template.
+1. This package was created with Cookiecutter_ and the `audreyr/cookiecutter-pypackage`_ project template.
 
-.. _Cookiecutter: https://github.com/audreyr/cookiecutter
-.. _`audreyr/cookiecutter-pypackage`: https://github.com/audreyr/cookiecutter-pypackage
+    [Cookiecutter](https://github.com/audreyr/cookiecutter)
+
+    [`audreyr/cookiecutter-pypackage`](https://github.com/audreyr/cookiecutter-pypackage)
+
+2. Some functions in `ParametricModelInference` are adopted from a [Github repo](https://github.com/sriki18/adnls/) by sriki18.

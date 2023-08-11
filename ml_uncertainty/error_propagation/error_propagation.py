@@ -10,6 +10,9 @@ import pandas as pd
 from .statistical_utils import compute_intervals
 from copy import deepcopy
 
+# TODO: Write proper validation for center X and center X value.
+# TODO: Write proper documentation.
+
 
 class ErrorPropagation:
     r"""
@@ -47,7 +50,7 @@ class ErrorPropagation:
         dfe=None,
         model_kwarg_dict={},
         center_X=True,
-        center_X_value="infer_from_X",
+        X_mean_value="infer_from_X",
     ):
         r"""
         Parameters
@@ -156,7 +159,15 @@ class ErrorPropagation:
 
         # Calculate error propagation.
         SE_on_mean, SE_on_prediction = self._propagate_errors(
-            func, X, params, X_err, params_err, model_kwarg_dict, sigma, center_X
+            func,
+            X,
+            params,
+            X_err,
+            params_err,
+            model_kwarg_dict,
+            sigma,
+            center_X,
+            X_mean_value,
         )
 
         # Determine appropriate SD and compute interval.
@@ -523,7 +534,16 @@ class ErrorPropagation:
         return np.array(variances_X)
 
     def _propagate_errors(
-        self, func, X, params, X_err, params_err, model_kwarg_dict, sigma, center_X
+        self,
+        func,
+        X,
+        params,
+        X_err,
+        params_err,
+        model_kwarg_dict,
+        sigma,
+        center_X,
+        X_mean_value,
     ):
         """This function will perform the computations to compute
         the required properties which can be accessed as required.
@@ -538,7 +558,14 @@ class ErrorPropagation:
         # Source: https://www.stat.cmu.edu/~cshalizi/36-220/lecture-11.pdf
         if center_X:
             X = deepcopy(X)
-            X = X - X.mean(axis=0)
+            if type(X_mean_value) == str:
+                if X_mean_value == "infer_from_X":
+                    X = X - X.mean(axis=0)
+                else:
+                    raise ValueError("Invalid argument for X_mean_value. \
+                                     Please see docs.")
+            else:
+                X = X - X_mean_value
 
         if X_err is not None:
             grad_matrix_for_X = self.get_grad_matrix_for_X(

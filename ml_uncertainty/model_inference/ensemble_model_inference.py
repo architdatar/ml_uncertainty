@@ -60,7 +60,7 @@ class EnsembleModelInference:
         feature_imp_shape = (n_features, n_estimators, n_outputs)
 
         feature_imp_array = np.tile(np.float64(np.nan), feature_imp_shape)
-        n_feature_imp_array = np.zeros((n_features, 1, n_outputs), dtype=np.int64)
+        n_feature_imp_array = np.zeros((n_features, 1, n_outputs), dtype=int)
 
         # Compute the array for each tree.
         for estimator_ind, estimator in enumerate(estimator.estimators_):
@@ -291,7 +291,7 @@ class EnsembleModelInference:
 
         # Initializing oob_pred and n_oob_pred arrays
         oob_pred = np.tile(np.float64(np.nan), oob_pred_shape)
-        n_oob_pred = np.zeros((n_samples, 1, n_outputs), dtype=np.int32)
+        n_oob_pred = np.zeros((n_samples, 1, n_outputs), dtype=int)
 
         n_samples_bootstrap = _get_n_samples_bootstrap(
             n_samples,
