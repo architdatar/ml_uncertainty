@@ -13,6 +13,7 @@ DOF calculation: Talk by Hui Zou (https://hastie.su.domains/TALKS/enet_talk.pdf)
         large sample approximation does not hold.
         easily.
 # TODO: Enable model signficance tests.
+# TODO: Benchmark degrees of freedom for regularized linear regression with sklearn.
 """
 
 import autograd.numpy as np
@@ -24,7 +25,12 @@ import pandas as pd
 import sklearn
 from sklearn.exceptions import DataDimensionalityWarning
 from ..error_propagation.error_propagation import ErrorPropagation
-from .common_model_functions import linear_model, ordinary_residual, least_squares_loss
+from .common_model_functions import (
+    linear_model,
+    linear_model_with_intercept,
+    ordinary_residual,
+    least_squares_loss,
+)
 from ..error_propagation.statistical_utils import compute_intervals
 from ..non_linear_regression import NonLinearRegression
 
@@ -37,6 +43,8 @@ class ParametricModelInference:
     Contains a group of methods to get model inference from models in scikit-learn
     NOTE: The functions get_J, get_H are adopted from
     https://github.com/sriki18/adnls/blob/master/adnls.py#L92.
+    And the formulae are taken from Niclas Borlin's lecture slides.
+    https://www8.cs.umu.se/kurser/5DA001/HT07/lectures/lsq-handouts.pdf
     """
 
     """
@@ -86,10 +94,14 @@ class ParametricModelInference:
 
         Parameters
         ----------
+        estimator:
+            If sklearn estimators are used, the intercept is treated as different
+            parameter via the "fit_intercept" argument. But, for accurate error
+            propagation, the intercept_ must also be treated as a parameter
+            (as done in statsmodels). Thus, if fit_intercept is True, we append
+            the intercept_ parameter to the coefs_ to get the "best_fit_params"
+            and perform error analysis accordingly.
         y_train_weights:
-            NOTE: If this is not set to None, to get accurate results,
-            you must set up the loss function correctly. Please refer
-            to the example examples/weighted_least_squares_regression.
         """
 
         self.X_train = X_train
@@ -111,6 +123,10 @@ class ParametricModelInference:
 
         # Validate that the estimators, etc. are correctly specified.
         self._validate_input_arguments()
+
+        # If estimator is not None, populate the required model args.
+        if self.estimator is not None:
+            self._populate_args_for_known_estimators()
 
         # Compute model and error degrees of freedom.
         self._set_model_dof()
@@ -135,7 +151,7 @@ class ParametricModelInference:
             X, coefs_, y, model_kwargs, **residual_kwargs
         )
 
-        loss_term = self.loss(residuals)
+        loss_term = self.loss(residuals, **loss_kwargs)
 
         if self.regularization == "none":
             loss = loss_term
@@ -179,9 +195,7 @@ class ParametricModelInference:
             sklearn.utils.validation.check_is_fitted(self.estimator)
 
             # If estimator is of known type, populate the arguments for it.
-            if type(self.estimator) in self.__estimators_implemented:
-                self._populate_args_for_known_estimators()
-            else:
+            if not type(self.estimator) in self.__estimators_implemented:
                 raise ValueError(
                     f"Estimator of type {type(self.estimator).__module__} \
                                  cannot be used to infer the desired properties for \
@@ -209,6 +223,9 @@ class ParametricModelInference:
             # TODO: Further validate these functions by checking that they yield the
             # desired values in the desired formats.
             # TODO: Also validate other parameters related to best fit and regularization.
+
+        # Validate y_train_weights
+        self._validate_y_train_weights(self.y_train_weights, self.y_train)
 
     def _validate_X(self, X):
         """Checks that X is an ndarray of 2 dimensions and shape (m, n ).
@@ -250,9 +267,19 @@ class ParametricModelInference:
 
         # Get the Jacobian matrix for this model.
         if type(self.estimator) == sklearn.linear_model._base.LinearRegression:
-            self.intercept = self.estimator.intercept_
-            self.best_fit_params = self.estimator.coef_
-            self.model = linear_model
+            # If model if fitted with intercept, add intercept to best_fit_params
+            # as the first argument.
+            if self.estimator.fit_intercept:
+                self.intercept = self.estimator.intercept_
+                self.best_fit_params = np.concatenate(
+                    (np.array([self.estimator.intercept_]), self.estimator.coef_)
+                )
+                self.model = linear_model_with_intercept
+            else:
+                self.intercept = None
+                self.best_fit_params = self.estimator.coef_
+                self.model = linear_model
+
             self.residual = ordinary_residual
             self.loss = least_squares_loss
 
@@ -261,16 +288,26 @@ class ParametricModelInference:
             self.l1_penalty = None
             self.l2_penalty = None
 
-            self.model_kwargs = dict(intercept_=self.intercept)
+            self.model_kwargs = dict()
             self.residual_kwargs = dict()
-            self.loss_kwargs = dict()
+            self.loss_kwargs = dict(sample_weight=self.y_train_weights)
 
         elif (
             type(self.estimator) == sklearn.linear_model._coordinate_descent.ElasticNet
         ):
-            self.intercept = self.estimator.intercept_
-            self.best_fit_params = self.estimator.coef_
-            self.model = linear_model
+            # If model if fitted with intercept, add intercept to best_fit_params
+            # as the first argument.
+            if self.estimator.fit_intercept:
+                self.intercept = self.estimator.intercept_
+                self.best_fit_params = np.concatenate(
+                    (np.array([self.estimator.intercept_]), self.estimator.coef_)
+                )
+                self.model = linear_model_with_intercept
+            else:
+                self.intercept = self.estimator.intercept_
+                self.best_fit_params = self.estimator.coef_
+                self.model = linear_model
+
             self.residual = ordinary_residual
             self.loss = least_squares_loss
 
@@ -279,9 +316,10 @@ class ParametricModelInference:
             self.l1_penalty = self.estimator.alpha * self.estimator.l1_ratio
             self.l2_penalty = 0.5 * self.estimator.alpha * (1 - self.estimator.l1_ratio)
 
-            self.model_kwargs = dict(intercept_=self.intercept)
+            self.model_kwargs = dict()
             self.residual_kwargs = dict()
-            self.loss_kwargs = dict()
+            self.loss_kwargs = dict(sample_weight=self.y_train_weights)
+
         elif type(self.estimator) == NonLinearRegression:
             self.intercept = self.estimator.intercept_
             self.best_fit_params = self.estimator.coef_
@@ -298,7 +336,19 @@ class ParametricModelInference:
 
             self.model_kwargs = self.estimator.model_kwargs_dict
             self.residual_kwargs = self.estimator.residual_kwargs_dict
-            self.loss_kwargs = dict()
+            self.loss_kwargs = dict(sample_weight=self.y_train_weights)
+
+    def _validate_y_train_weights(self, y_train_weights, y_train):
+        """Runs the same validation protocol as y and then checks if they are the same
+        dimension.
+        """
+
+        if y_train_weights is not None:
+            self._validate_y(y_train_weights)
+
+            assert (
+                y_train_weights.shape == y_train.shape
+            ), "y_train_weights must be None or be the same shape as y_train."
 
     def _set_model_dof(self):
         """Computes model degrees of freedom."""
@@ -313,11 +363,16 @@ class ParametricModelInference:
             # Model degrees of freedom externally computed and specified.
             return model_dof
         else:  # Compute model degrees of freedom internally.
+            if intercept is None:  # Intercept wasn't fit separately.
+                coef_ = best_fit_params
+            else:
+                coef_ = best_fit_params[1:]
+
             if regularization == "none":
-                model_dof = best_fit_params.shape[0]
+                model_dof = coef_.shape[0]
             elif regularization == "l1":
-                non_zero_mask = best_fit_params != 0
-                model_dof = best_fit_params[non_zero_mask].shape[0]
+                non_zero_mask = coef_ != 0
+                model_dof = coef_[non_zero_mask].shape[0]
             elif regularization == "l2":
                 """Source: Elements of Statistical Learning, Ed. 2, Pg 68"""
                 d_values = np.linalg.svd(self.X_train)[1]
@@ -328,7 +383,7 @@ class ParametricModelInference:
                 In this case, we refer to the talk by Hui Zou
                 (https://hastie.su.domains/TALKS/enet_talk.pdf)
                 """
-                non_zero_mask = best_fit_params != 0
+                non_zero_mask = coef_ != 0
                 d_values = np.linalg.svd(self.X_train)[1]
 
                 # Since there is L1 regualarization, apply non-zero mask
@@ -338,17 +393,17 @@ class ParametricModelInference:
                 model_dof = (d_values ** 2 / (d_values ** 2 + l2_penalty)).sum()
 
         # The intercept value is not penalized during regularization.
-        # So, it should be added as +1 to the model degrees of freedom if it is
-        # part of the model kwargs.
-        if intercept in self.model_kwargs.keys() and intercept is not None:
-            model_dof += 1
+        # # So, it should be added as +1 to the model degrees of freedom if it is
+        # # part of the model kwargs.
+        # if intercept in self.model_kwargs.keys() and intercept is not None:
+        #     model_dof += 1
 
         # Set model dof.
         self.model_dof = model_dof
 
     def _set_error_dof(self):
         """Error dof = n-p"""
-        self.error_dof = self.X_train.shape[0] - self.model_dof
+        self.error_dof = self.X_train.shape[0] - 1 - self.model_dof
 
     def _set_sigma(self):
         """Standard deviation of the fit.
@@ -377,10 +432,8 @@ class ParametricModelInference:
 
         # Also allow for inference from weighted least
         # squares, ultimately allowing for heteroskedasticity in y.
-        # NOTE: Here, the weights are normalized by their mean,
-        # So, if they all have the same weights, they drop out.
         if self.y_train_weights is not None:
-            res = self.y_train_weights / self.y_train_weights.mean() * res
+            res = np.sqrt(self.y_train_weights) * res
 
         sigma = np.sqrt(np.matmul(res.transpose(), res) / self.error_dof)
         self.sigma = sigma
@@ -605,6 +658,7 @@ class ParametricModelInference:
         X,
         X_err=None,
         X_err_denotes_feature_correlation=False,
+        y_weights=None,
         type_="prediction",
         distribution=None,
         lsa_assumption=True,
@@ -629,11 +683,12 @@ class ParametricModelInference:
         df_int = eprop.get_intervals(
             function_=self.model_function,
             X=X,
-            params=self.estimator.coef_,
+            params=self.best_fit_params,
             X_err=X_err,
             params_err=self.vcov,
             X_err_denotes_feature_correlation=X_err_denotes_feature_correlation,
             sigma=self.sigma,
+            y_weights=y_weights,
             type_=type_,
             side=side,
             confidence_level=confidence_level,

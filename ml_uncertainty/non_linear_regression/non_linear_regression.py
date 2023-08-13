@@ -125,7 +125,7 @@ class NonLinearRegression(RegressorMixin, BaseEstimator):
 
         # Validate sample_weight. Check for the same things as y.
         if sample_weight is not None:
-            self._validate_y(sample_weight)
+            self._validate_y(sample_weight, X)
 
         # Here, we first set the intercept as done in sklearn functions
         # If it is provided either through the model or through kwargs,
@@ -149,9 +149,8 @@ class NonLinearRegression(RegressorMixin, BaseEstimator):
             if sample_weight is None:
                 return residuals
             else:
-                sw_normalized = sample_weight / np.linalg.norm(sample_weight)
-                sample_weight_sqrt = np.sqrt(sw_normalized)
-                return residuals @ sample_weight_sqrt
+                sample_weight_sqrt = np.sqrt(sample_weight)
+                return residuals * sample_weight_sqrt
 
         res_ls = least_squares(
             _model_residuals,

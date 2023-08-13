@@ -46,6 +46,7 @@ class ErrorPropagation:
         params_err=None,
         X_err_denotes_feature_correlation=False,
         sigma=None,
+        y_weights=None,
         type_="confidence",
         side="two-sided",
         confidence_level=90.0,
@@ -150,6 +151,7 @@ class ErrorPropagation:
             distribution=distribution,
             lsa_assumption=lsa_assumption,
             dfe=dfe,
+            y_weights=y_weights,
         )
 
         # Ensure that the function meets the required demands by
@@ -161,13 +163,7 @@ class ErrorPropagation:
 
         # Calculate error propagation.
         SE_on_mean, SE_on_prediction = self._propagate_errors(
-            func,
-            X,
-            params,
-            X_err,
-            params_err,
-            model_kwarg_dict,
-            sigma,
+            func, X, params, X_err, params_err, model_kwarg_dict, sigma, y_weights
         )
 
         # Determine appropriate SD and compute interval.
@@ -228,6 +224,7 @@ class ErrorPropagation:
         distribution,
         lsa_assumption,
         dfe,
+        y_weights,
     ):
         """Validates and transforms inputs for the function"""
 
@@ -301,6 +298,9 @@ class ErrorPropagation:
             [dfe is None, isinstance(dfe, float), isinstance(dfe, int)]
         ), "dfe is not None, float, or int.\
                    Please supply appropriate values."
+
+        # Validates y_weights
+        self._validate_y_weights(y_weights, X)
 
         return func, X, params, X_err, params_err
 
@@ -449,6 +449,16 @@ class ErrorPropagation:
             y_hat.shape[0] == X.shape[0]
         ), "Size of y_hat is different from that of X. Please make sure that they match."
 
+    def _validate_y_weights(self, y_weights, X):
+        """Checks that y_weights is either NoneType or an array of shape
+        (X.shape[0],)"""
+
+        if y_weights is not None:
+            assert y_weights.shape == (
+                X.shape[0],
+            ), "y_weights is not None or array of shape \
+                (X.shape[0],). Please provide appropriate values."
+
     def get_grad_matrix_for_params(self, func, X, params, model_kwarg_dict):
 
         grad_matrix = jacobian(lambda params: func(X, params, **model_kwarg_dict))(
@@ -534,14 +544,7 @@ class ErrorPropagation:
         return np.array(variances_X)
 
     def _propagate_errors(
-        self,
-        func,
-        X,
-        params,
-        X_err,
-        params_err,
-        model_kwarg_dict,
-        sigma,
+        self, func, X, params, X_err, params_err, model_kwarg_dict, sigma, y_weights
     ):
         """This function will perform the computations to compute
         the required properties which can be accessed as required.
@@ -573,7 +576,7 @@ class ErrorPropagation:
         )
 
         # Get prediction intervals.
-        SE_on_prediction = self.compute_SE_on_prediction(SE_on_mean, sigma)
+        SE_on_prediction = self.compute_SE_on_prediction(SE_on_mean, sigma, y_weights)
 
         return SE_on_mean, SE_on_prediction
 
@@ -590,11 +593,15 @@ class ErrorPropagation:
 
         return SE_on_mean
 
-    def compute_SE_on_prediction(self, SE_on_mean, sigma):
+    def compute_SE_on_prediction(self, SE_on_mean, sigma, y_weights):
         """Uses SE_on_mean to get SE_on_prediciton."""
 
         if sigma is not None:
-            SE_on_prediction = np.sqrt((SE_on_mean ** 2 + sigma ** 2))
+            if y_weights is None:  # Equal weights for all samples.
+                SE_on_prediction = np.sqrt((SE_on_mean ** 2 + sigma ** 2))
+            if y_weights is not None:
+                SE_on_prediction = np.sqrt((SE_on_mean ** 2 + sigma ** 2 / y_weights))
+
         else:
             SE_on_prediction = None
 

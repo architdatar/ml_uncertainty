@@ -47,7 +47,7 @@ def test_parameter_errors(model_fit):
 
     # Make sure that it is the right shape.
     assert (
-        df_imp.shape[0] == regr.coef_.shape[0]
+        df_imp.shape[0] == regr.coef_.shape[0] + 1  # +1 due to the intercept term.
     ), "First dimension of the feature importance dataframe \
             differs from the number of coefficients in the model."
 
