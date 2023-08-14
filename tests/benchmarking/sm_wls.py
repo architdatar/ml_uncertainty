@@ -106,16 +106,16 @@ assert (
 
 #%%
 # Write out the inputs and outputs to a file.
-np.savetxt("sm_wls_outputs/x.csv", x, fmt="%.10f", delimiter=",")
-np.savetxt("sm_wls_outputs/y.csv", y, fmt="%.10f", delimiter=",")
-np.savetxt("sm_wls_outputs/w.csv", w, fmt="%.10f", delimiter=",")
-np.savetxt("sm_wls_outputs/sm_params.csv", sm_params, fmt="%.10f", delimiter=",")
-np.savetxt("sm_wls_outputs/sm_params_se.csv", sm_param_se, fmt="%.10f", delimiter=",")
-np.savetxt(
-    "sm_wls_outputs/sm_pred_df_bounds.csv",
-    sm_pred_df[["obs_ci_lower", "obs_ci_upper"]],
-    fmt="%.10f",
-    delimiter=",",
-)
+# np.savetxt("sm_wls_outputs/x.csv", x, fmt="%.10f", delimiter=",")
+# np.savetxt("sm_wls_outputs/y.csv", y, fmt="%.10f", delimiter=",")
+# np.savetxt("sm_wls_outputs/w.csv", w, fmt="%.10f", delimiter=",")
+# np.savetxt("sm_wls_outputs/sm_params.csv", sm_params, fmt="%.10f", delimiter=",")
+# np.savetxt("sm_wls_outputs/sm_params_se.csv", sm_param_se, fmt="%.10f", delimiter=",")
+# np.savetxt(
+#     "sm_wls_outputs/sm_pred_df_bounds.csv",
+#     sm_pred_df[["obs_ci_lower", "obs_ci_upper"]],
+#     fmt="%.10f",
+#     delimiter=",",
+# )
 
 # %%

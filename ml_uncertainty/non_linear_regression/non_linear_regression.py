@@ -1,25 +1,15 @@
 """
-Wrapper around scipy.optimize.least_squares to provide easy fit for 
+Wrapper around scipy.optimize.least_squares to provide easy fitting utility for 
 non-linear functions. 
-
-Future: 
-    1. Add capabilities for regularization (using scipy.optimize.minimize)
-    2. Non-explicit constraints (using scipy.optimize.minimize)
-    3. Accurate degree of freedom calculations for non-linear models 
-    (develop code using simulations, see documentation for ensemble model 
-    inference)
 """
 
-# TODO: Add and benchmark WLS case
-
 import numpy as np
-from sklearn.base import BaseEstimator, RegressorMixin
-from scipy.optimize import least_squares
 from typing import Callable
 from copy import deepcopy
+from scipy.optimize import least_squares
+from sklearn.base import BaseEstimator, RegressorMixin
 from sklearn.exceptions import DataDimensionalityWarning
 from ..error_propagation.error_propagation import ErrorPropagation
-import inspect
 from ..model_inference.common_model_functions import ordinary_residual
 
 # Reusing function to check that arrays have the right type and dtype.
@@ -27,37 +17,62 @@ check_type_and_dtype = ErrorPropagation.check_type_and_dtype
 
 
 class NonLinearRegression(RegressorMixin, BaseEstimator):
-    """
+    r"""
     Scikit-learn-like fitting utility for non-linear models.
 
-    Can be used with sklearn pipelines, etc. to provide an easy interface for
-    non-linear model fitting and inference.
+    Can be easily used to get model inference such as parameter significance tests
+    and prediction intervals.
 
     Parameters:
     -----------
-    residual: {callable, "ordinary"}
-        Defines how to compute residuals. If a function is specified,
-            it must have its arguments as y_pred, y (each 1D arrays) and return a 1-D
-            vector of the same dimension.
-        If "ordinary", residual = y_hat - y
+    model: callable with inputs (X, coefs_, **model_kwargs) and output y
+        Function defining how the predictor variables relate to the response.
+        X: numpy array of shape (n_examples, n_dimensions)
+        coefs_: numpy array of shape (n_parameters, )
+        **model_kwargs: additional keyword arguments for the model.
+        y: numpy array of shape (n_examples,)
+    p0_length: {None, int}, optional
+        If None: User must provide an initial guess for the model parameters when
+            calling 'fit' method.
+        If int: Number of model parameters (n_parameters).
+    model_kwargs_dict: dict, optional, default={}
+        Dictionary of model keyword arguments.
+    residual: {callable, str}, optional, default: "ordinary"
+        Defines how to compute residuals.
+            If callable (function): It must have its arguments as y_pred, y and
+            return residuals. Each of y_pred, y, and residuals must be a 1-D array of
+            shape (n_examples,).
+            If str: specifies what form of residual function to use.
+            As of now, we only support "ordinary" which defines the residual as
+            residual = y_hat - y.
+    residual_kwargs_dict: dict, optional, default={}
+        Dictionary of residual keyword arguments.
+    least_sq_kwargs_dict: dict, optional, default={}
+        Dictionary of optional keyword arguments to scipy.optimize.least_squares
+          function. See scipy.optimize.least_squares documentation.
+    copy_X: bool, optional, default=True
+        Specified if X should be deep-copied during 'fit', This prevents X input to the
+        function from undergoing any change during the fit.
 
+    Attributes:
+    -----------
+    coef_: array of shape (n_parameters, )
+        Best parameters of the fit.
 
-    Limitations:
+    Notes:
     ------
     1. Only supports single target variable.
     2. Uses only a single processor to fit. Parallelization not implemented.
     3. Handles dense matrices only; no support for sparse matrices.
-    4. Each instantiation can handle only one set of kwargs for the model.
-    5. No regularization available. This is intuitive because non-linear models
-        are generally not used for feature selection, etc.
-    6. Only bounded constraints mentioned in scipy.optimize.least_squares are allowed.
+    4. No regularization available.
+    5. Only bounded constraints allowed in scipy.optimize.least_squares are allowed.
+        See documentation.
 
-    Caution:
-    1. fit_intercept = True method computes intercept by taking the mean of the
-        reponse variable.
-        This is NOT accurate for non-linear regression. For such cases,
-        set up the model to incorporate intercept_ as a model parameters and
-        not as a special kwarg. ..Will be removed in future.
+    Examples:
+    --------
+    See
+        examples/non_linear_regression_quadratic.py
+        examples/non_linear_regression_arrhenius.py
     """
 
     def __init__(
@@ -67,30 +82,19 @@ class NonLinearRegression(RegressorMixin, BaseEstimator):
         model_kwargs_dict={},
         residual="ordinary",
         residual_kwargs_dict={},
-        fit_intercept=False,
         least_sq_kwargs_dict={},
         copy_X=True,
     ):
         self.model = model
         self.p0_length = p0_length
         self.model_kwargs_dict = model_kwargs_dict
-        self.fit_intercept = fit_intercept
         self.least_sq_kwargs_dict = least_sq_kwargs_dict
         self.copy_X = copy_X
 
         # Initialize a function modifying the model as required.
         self.func = self.model
 
-        # If fit_intercept is set to True, the model must have an
-        # intercept_ arg. In this case, the intercept will be computed
-        # from the y values and y_sample_weights.
-        # Else, intercept_ will be treated as any other kwarg that the user
-        # must correctly specify.
-        if self.fit_intercept:
-            assert (
-                "intercept_" in self.func.__code__.co_varnames
-            ), "If fit_intercept was set to true, \
-                    model function must have 'intercept_' as argument."
+        self._validate_p0_length(self.p0_length)
 
         # Set residual.
         if residual == "ordinary":
@@ -100,9 +104,43 @@ class NonLinearRegression(RegressorMixin, BaseEstimator):
 
         self.residual_kwargs_dict = residual_kwargs_dict
 
+    def _validate_p0_length(self, p0_length):
+        """p0 length must be None of type int"""
+
+        if p0_length is not None:
+            if type(p0_length) == int:
+                pass
+            else:
+                raise ValueError(
+                    f"p0_length type detected as {type(p0_length)}. \
+                                 It must be either None or type int."
+                )
+
     def fit(self, X, y, p0=None, sample_weight=None):
         """
-        Fit the non-linear model.
+        Fits the non-linear model.
+
+        Wrapper around scipy.optimize.least_squares to implement optimization.
+
+        Parameters:
+        -----------
+        X: array of shape (n_examples, n_dimensions)
+            Training data
+        y: array of shape (n_examples, )
+            Target values.
+        p0: {None, array of shape (n_parameters,)}, optional, default: None
+            Array specifying intitial estimate of the best fit parameters.
+            If None, an array of shape (p0_length,) of random values between
+            0 and 1 from a uniform distribution will be generated and use as the
+            initial guess.
+            If p0 is None and p0_length is also None, an error will be raised.
+        sample_weight: {None, array of shape (n_samples,)}, optional, default: None
+            Individual weights for each sample.
+
+        Returns:
+        --------
+        self: object
+            Fitted estimator
         """
 
         # Validate data
@@ -127,20 +165,13 @@ class NonLinearRegression(RegressorMixin, BaseEstimator):
         if sample_weight is not None:
             self._validate_y(sample_weight, X)
 
-        # Here, we first set the intercept as done in sklearn functions
-        # If it is provided either through the model or through kwargs,
-        # it is set to that value. Else, it is set to 0.
-        self._set_intercept()
-
         # Validate the model by computing the y_hat for the given X and ensuring
         # that is the same shape as y. Also test the predict method.
         y_pass = self.predict(X, p0, **self.model_kwargs_dict)
 
         self._validate_y(y_pass, X)
 
-        # Build a residual function based off of user preference and fit_intercept
-        #   If fit_intercept is True, make intercept the first argument of the
-        # parameters and construct the residual function accordingly.
+        # Build a residual function.
         def _model_residuals(params, X, y, sample_weight, model_kwargs_dict):
 
             y_hat = self.predict(X, params, **model_kwargs_dict)
@@ -156,7 +187,7 @@ class NonLinearRegression(RegressorMixin, BaseEstimator):
             _model_residuals,
             x0=p0,
             args=(X, y, sample_weight, self.model_kwargs_dict),
-            **self.least_sq_kwargs_dict
+            **self.least_sq_kwargs_dict,
         )
 
         self.fitted_object = res_ls
@@ -212,30 +243,27 @@ class NonLinearRegression(RegressorMixin, BaseEstimator):
 
         assert p0.ndim == 1, "p0 is not a 1-D vector. Please supply a 1-D vector."
 
-    def _set_intercept(self):
-        """Sets intercept for the given problem."""
-
-        # Get the default value of the intercept.
-        # If specified in model kwargs, use that.
-        # Else, use the default value of the function kwarg.
-        if "intercept_" in list(self.model_kwargs_dict.keys()):
-            self.intercept_ = self.model_kwargs_dict.get("intercept_")
-        else:
-            # Get default value of this from the function's signature.
-            intercept_value_list = [
-                v.default
-                for k, v in inspect.signature(self.func).parameters.items()
-                if k == "intercept_"
-            ]
-
-            if intercept_value_list == []:  # Empty list signifies that
-                # the user has not set a value for intercept_
-                self.intercept_ = 0
-            else:
-                self.intercept_ = intercept_value_list[0]
-
     def predict(self, X, params=None, **model_kwargs):
-        """ """
+        """
+        Predict using the given model.
+
+        Parameters:
+        -----------
+        X: array of shape (n_samples, n_dimensions)
+            Samples
+        params: {None, array of shape (n_parameters,)}, optional, default=None
+            Model parameters.
+            If None:
+                parameters = self.coef_ attribute.
+                If estimator is not fitted, an error will be raised.
+        **model_kwargs:
+            Optional keyword arguments to be passed to the model.
+
+        Returns:
+        --------
+        y: array of shape (n_samples,)
+            Returns predicted values.
+        """
 
         if params is None:
             params = self.coef_

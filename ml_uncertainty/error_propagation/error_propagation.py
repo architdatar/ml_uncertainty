@@ -4,33 +4,43 @@ Defines functions for forward propagation of errors.
 
 from typing import Callable
 import autograd.numpy as np
+import pandas as pd
 from autograd import jacobian
 from sklearn.exceptions import DataDimensionalityWarning
-import pandas as pd
 from .statistical_utils import compute_intervals
-from copy import deepcopy
-
-# TODO: Write proper validation for center X and center X value.
-# TODO: Write proper documentation.
-# TODO: For inputs with weights, adjust prediction intervals accordingly.
-# Instead of $\sigma$, use $\sigma_i$
 
 
 class ErrorPropagation:
     r"""
     Performs forward propagation of error for any parametric function
-    based on the errors of parameters and its inputs.
+    based on the errors of parameters and its input uncerainties.
 
     Given $ y = f(\bf{X}, \bf{\beta})  $, computes
 
     $$ \delta y = \delta f(\bf{X}, \bf{\beta}) $$
-    $$ \delta y= \sqrt{(\nabla_{\textbf{X}}f) \delta\textbf{X} (\nabla_{\textbf{X}}f)^T  +
-        (\nabla_{\bm{\beta}}f) \delta\bm{\beta} (\nabla_{\bm{\beta}}f)^T} $$
+    $$ \delta y= \sqrt{(\nabla_{\textbf{X}}f) \delta\textbf{X} (\nabla_{\textbf{X}}f)^T
+        + (\nabla_{\bm{\beta}}f) \delta\bm{\beta} (\nabla_{\bm{\beta}}f)^T} $$
+
+    Can be used to compute confidence as well as prediction intervals.
+
+    Confidence intervals ~ Interval of mean of the predicted value.
+            $$  \mathrm{Var}( \mathbb{E}(\hat{y} | \mathbf{X}, \bm{\beta})) $$
+    Prediction intervals ~ Interval of the predicted value.
+            $$ \mathrm{Var}(\hat{y} | \bf{X}, \bm{\beta}) $$
+
+    We know that
+            $$ \mathrm{Var}(\hat{y} | \bf{X}, \bm{\beta}) =
+            \mathrm{Var}( \mathbb{E}(\hat{y} | \mathbf{X}, \bm{\beta})) +
+                \sigma^2 $$
+    So, we need some estimate of $\sigma^2$ to calculate prediction intervals.
+
 
     Assumptions:
+    ------------
     1. All samples in X are i.i.d. (i.e., uncorrelated)
 
     References:
+    -----------
     1.https://www.stat.cmu.edu/~cshalizi/36-220/lecture-11.pdf
     """
 
@@ -58,49 +68,50 @@ class ErrorPropagation:
         r"""
         Parameters
         ----------
-        func: Callable
+        function_: callable
             Function with respect to which we want to propagate errors.
             The arguments of the this function MUST be of the form:
-            f(X, params, *args, **kwargs) otherwise, errors will be raised.
-
+            f(X, params, **kwargs) otherwise, errors will be raised.
         X: np.ndarray of shape (m, n)
             m : number of examples,
             n : number of features
-
         params: np.ndarray of shape (p,)
             The parameters of the function.
             p: Number of parameters
-
-        X_err: np.ndarray
+        X_err: {None, array}, optional, default: None
             1. If X_err is a 1-D vector of shape (n,)
              Standard errors for features in X are specified.
              Errors are equal for all examples and are uncorrelated with each other.
             2. If X_err is a 2-D vector of shape (m, n)
                 Standard errors are specified.
-                These are different across samples but assumed to be uncorrelated across
-                features.
+                These are different across samples but assumed to be uncorrelated
+                across features.
             3. If X_err is a 2-D array of shape (n, n)
                 Covariance matrix for errors are specified.
                 Errors are equal for each example but those for different
-                features might be correlated. The $i, j$ th element of matrix represents
-                $cov(X_err_i, X_err_j)$ representing the covariance of the errors $i, j$ th feature of the data.
+                features might be correlated. The $i, j$ th element of matrix
+                represents $cov(X_err_i, X_err_j)$ representing the covariance of the
+                errors $i, j$ th feature of the data.
             4. If X_err is a tensor of shape (m, n, n)
-                For each example, the nxn matrix denotes the covariance matrix of errors in X.
-
+                For each example, the nxn matrix denotes the covariance matrix of
+                errors in X.
+        params_err: {None, array}, optional, default: None
+            If array-type: shape must be (p,) or (p, p)
+            1. If a 1-D vector of shape (p,), treats it as standard error for each
+                parameter.
+                It will be assumed that the various parameters in $\beta$ are
+                mutually uncorrelated.
+            2. If a 2-D vector of shape (p, p), it will be assumed that this matrix is
+            the variance-covariance matrix for the parameters
+            $\mathrm{cov}(\bm{\beta})$.
         X_err_denotes_feature_correlation: bool, optional, default: False
             In the rare case that m=n, X_err will computed according to
             case 2 unless this parameter is
             explicity set to True.
-
-        params_err: np.ndarray of shape (p,) or (p, p)
-            1. If a 1-D vector of shape (p,), treats it as standard errors for each parameter.
-            It will be assumed that the various parameters in $\beta$ are mutually uncorrelated.
-            2. If a 2-D vector of shape (p, p), it will be assumed that this matrix is
-            the covariance matrix for the parameters $ \mathrm{cov}(\bm{\beta}) $.
-
-        var_y: float64, default: None
-            Estimate of the variance of the distribution of $y$
+        sigma: {None, float}, default: None
+            Estimate of the standard deviation of the distribution of $y$
             at given $\bf{X}, \bm{beta}$.
+            Only required if type_=="prediction".
 
             Mathematically,
             $$ y = f(\bf{X}, \bm{\beta}) + \epsilon $$
@@ -116,24 +127,40 @@ class ErrorPropagation:
 
             Alternatively, if there is some prior knowledge / intuition
             about $ \sigma^2 $, it can also be used.
+        y_weights: {None, array}, optional, default: None
+            If array: must have shape (n_samples, )
+            Weights of targets. Often used when the variances of the
+             distributions from which they are drawn substantially different.
+             Used to compute uncertainty of the prediction through
+             $\sigma_i = \sigma / weight_i $.
+        type_: str, {"confidence", "prediction"}, default: "confidence"
+            Defines the type of interval to compute.
+        side: str, "two-sided", "lower", "upper", default: "two-sided"
+            Defines the type of interval to be computed.
+        confidence_level: float, default: 90.0
+            Percentage of the distribution to be enveloped by the interval.
+            Example: A value of 90 means that you wish to compute a 90% interval.
+        distribution: str, {"normal", "t"}, default: "normal"
+            The type of distribution that the desired interval is from.
+        lsa_assumption: bool, optional, default=False
+            Whether or not to invoke the large sample approximation.
+            If True, assumes the distribution to be normal.
+            Else, assumes the distribution to be t distribution with error_dof
+            degrees of freedom.
+        dfe: {None, float, int}, optional, default:None
+            Error degrees of freedom of the fit.
+            Only needed to compute prediction intervals. Ignored for "confidence".
+            If None, uses the self.error_dof attribute; i.e., the computed
+            error degrees of the model fit.
+        model_kwarg_dict: dict, optional, default:{}
+            Keyword arguments to be passed to "function_"
 
-            NOTE: var_y is used to compute prediction intervals.
-            If it is not specified, prediction intervals will NOT be computed.
-            Only confidence intervals will be computed.
-
-            Confidence intervals ~ Interval of mean of the predicted value.
-                    $$  \mathrm{Var}( \mathbb{E}(\hat{y} | \mathbf{X}, \bm{\beta})) $$
-            Prediction intervals ~ Interval of the predicted value.
-                    $$ \mathrm{Var}(\hat{y} | \bf{X}, \bm{\beta}) $$
-
-            We know that
-                    $$ \mathrm{Var}(\hat{y} | \bf{X}, \bm{\beta}) =
-                    \mathrm{Var}( \mathbb{E}(\hat{y} | \mathbf{X}, \bm{\beta})) +
-                     \sigma^2 $$
-            So, we need some estimate of $\sigma^2$ to calculate prediction intervals.
-
-        *args, **kwargs: Extra args and kwargs to be passed to the function.
-
+        Returns
+        -------
+        df_int: pandas.DataFrame
+            Dataframe consisting of mean (predicted values),
+                std (standard error of the interval (prediction / confidence))
+                lower_bound, upper_bound: lower, upper bound of the desired intervals.
         """
 
         # Validate and transform the inputs
@@ -376,11 +403,13 @@ class ErrorPropagation:
                 return np.diag(params_err ** 2)
 
             elif params_err.ndim == 2 and params_err.shape == (p, p):
-                # params_err is a pxp matrix specifying the covariance matrix of the parameters.
+                # params_err is a pxp matrix specifying the covariance matrix of the
+                # parameters.
                 return params_err
             else:
                 raise DataDimensionalityWarning(
-                    "params_err not in one of the required shapes. Please read the docs."
+                    "params_err not in one of the required shapes.\
+                    Please read the docs."
                 )
         else:
             return params_err
@@ -405,9 +434,9 @@ class ErrorPropagation:
                     )
 
                 elif X_err.shape == (n, n):
-                    # if X_err is a 2-D matrix with (n,n) dimensions, it means that the errors are
-                    # same across all examples, but the features are correlated and their
-                    # covariance matrix is specified.
+                    # if X_err is a 2-D matrix with (n,n) dimensions, it means that the
+                    # errors are same across all examples, but the features
+                    # are correlated and their covariance matrix is specified.
                     X_err_transformed = np.tile(X_err, (m, 1, 1))
 
                 if (
@@ -419,13 +448,15 @@ class ErrorPropagation:
                     # In this case, assume that the covariance matrix is specified.
                     X_err_transformed = np.tile(X_err, (m, 1, 1))
             elif X_err.ndim == 3 and X_err.shape == (m, n, n):
-                # This means that there are different errors in X for different examples.
+                # This means that there are different errors in X for different
+                # examples.
                 # And assumed that the covariance matrix is specified.
                 X_err_transformed = X_err
             else:
                 # All other cases
                 raise DataDimensionalityWarning(
-                    "X_err is not correctly specified. Plesae refer to the docs for the correct specification"
+                    "X_err is not correctly specified. Plesae refer to the docs for \
+                    the correct specification"
                 )
 
             return X_err_transformed
@@ -447,7 +478,8 @@ class ErrorPropagation:
         assert y_hat.ndim == 1, "y_hat is not a 1-D vector. Please supply a 1-D vector."
         assert (
             y_hat.shape[0] == X.shape[0]
-        ), "Size of y_hat is different from that of X. Please make sure that they match."
+        ), "Size of y_hat is different from that of X. Please make sure that\
+            they match."
 
     def _validate_y_weights(self, y_weights, X):
         """Checks that y_weights is either NoneType or an array of shape
@@ -485,7 +517,8 @@ class ErrorPropagation:
         # We get a matrix of the shape (m, m, n). This also shows the correlations
         # between various samples. As of now, i dont know how to multiply such a matrix
         # or handle the information about the sample-sample correlation.
-        # So, we remove that information and only consider the elements along the diagonal.
+        # So, we remove that information and only consider the elements along the
+        # diagonal.
 
         grad_matrix = np.diagonal(mat, axis1=0, axis2=1).T  # grad matrix of shape mxn
 
@@ -521,7 +554,8 @@ class ErrorPropagation:
 
         def compute_y_err_for_x(i):
             """
-            Computes the error based on the grad matrix and X_err matrix for each example.
+            Computes the error based on the grad matrix and X_err matrix for each \
+            example.
             """
 
             # grad_X_example: 1xn, X_err_example: nxn, grad_X_example.T: nx1
@@ -576,12 +610,12 @@ class ErrorPropagation:
         )
 
         # Get prediction intervals.
-        SE_on_prediction = self.compute_SE_on_prediction(SE_on_mean, sigma, y_weights)
+        SE_on_prediction = self._compute_SE_on_prediction(SE_on_mean, sigma, y_weights)
 
         return SE_on_mean, SE_on_prediction
 
     def _compute_SE_on_mean(self, X_err, params_err, variances_X, variances_params):
-        """computes the standard error of the mean prediction SE(E(y|X, \beta))"""
+        r"""Computes the standard error of the mean prediction SE(E(y|X, \beta))"""
 
         # Add all variances and take a square root.
         if params_err is not None and X_err is None:  # Only error prop from params.
@@ -593,8 +627,11 @@ class ErrorPropagation:
 
         return SE_on_mean
 
-    def compute_SE_on_prediction(self, SE_on_mean, sigma, y_weights):
-        """Uses SE_on_mean to get SE_on_prediciton."""
+    def _compute_SE_on_prediction(self, SE_on_mean, sigma, y_weights):
+        r"""Uses SE_on_mean to get SE_on_prediciton.
+
+        $$ SE(y|X, \beta) = \sqrt(SE(E(y|X, \beta))^2 + \sigma^2) $$
+        """
 
         if sigma is not None:
             if y_weights is None:  # Equal weights for all samples.

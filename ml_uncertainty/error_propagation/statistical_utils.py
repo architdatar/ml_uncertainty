@@ -1,4 +1,5 @@
 """Contains statisical utils utilized by several classes"""
+
 from scipy.stats import norm, t as t_dist
 import numpy as np
 
@@ -12,6 +13,18 @@ def get_significance_levels(confidence_level, side):
     In other words, it is the stat at which the percent of distribution
     less than the desired value is the desired probability.
 
+    Parameters
+    ----------
+    confidence_level: float
+        Confidence level desired.
+    side: str, {"two-sided", "lower", "upper"}
+        Side of the interval we want
+
+    Returns
+    --------
+    significance_level: float
+        Stats between which our desired interval should lie.
+
     Examples:
     --------
     1. For a 2-sided 90% confidence interval, we would wish to obtain the stats
@@ -22,7 +35,6 @@ def get_significance_levels(confidence_level, side):
         x* such that P(x >= x*) = 90%, alternatively, P(x < x*) = 10%
     3. For upper 90% CI, we would wish to obtain the stat
         x* such that P(x < x*) = 90%
-
     """
 
     if side == "two-sided":
@@ -44,6 +56,19 @@ def get_significance_levels(confidence_level, side):
 
 
 def get_z_values(significance_levels):
+    """Gets z-stats from normal distribution for the desired
+    significance levels.
+
+    Parameters
+    ----------
+    significance_levels: list
+        Significance levels
+
+    Returns
+    -------
+    list
+        Z-values
+    """
     # Gets z values for the required significance_levels
     z_values = []
     for level in significance_levels:
@@ -57,7 +82,20 @@ def get_z_values(significance_levels):
 
 
 def get_t_values(significance_levels, dfe):
-    """Computes t values"""
+    """Computes t values
+
+    Parameters
+    ----------
+    significance_levels: list
+        Significance levels
+    dfe: int
+        Degrees of freedom
+
+    Returns
+    -------
+    list
+        t-values
+    """
 
     if not dfe:
         # dfe is not supplied.
@@ -92,38 +130,29 @@ def compute_intervals(
 ):
     """Computes the desired intervals given the mean and standard error (SE) values.
 
-    Uses the mean, SE, and other properties to compute the desired intervals.
-
     Parameters:
     ------------
-    type: str, "confidence" or "prediction", default: "confidence"
-        Defines the type of interval you wish to compute.
-    side: str, "two-sided", "lower", "upper", default: "two-sided"
-        Defined the type of interval to be computed.
-    confidence_level: float, default: 90
+    mean: array
+        Means of the distributions
+    se: array
+        Standard errors
+    side: str, optional, {"two-sided", "lower", "upper"}, default: "two-sided"
+        Defines the type of interval to be computed.
+    confidence_level: float, optional, default: 90
         Percentage of the distribution to be enveloped by the interval.
         Example: A value of 90 means that you wish to compute a 90% interval.
-    distribution: str, "normal" or "t", default: "normal"
+    distribution: str, optional, {"normal", "t"}, default: "normal"
         The type of distribution that the desired interval is from.
         For now, only normal and t distributions are supported.
         If you wish to compute an interval on a different distribution, please compute
         the appropriate interval externally.
-    y_hat: None or np.ndarray of shape (m,), default: None
-        The central value of the interval you wish to compute.
-        If None, a value of y_hat will be computed for the function and its arguments
-        supplied earlier.
-        Alternatively, this can be externally computed and supplied here.
-    se: None or float, default: None
-        If None, will be computed from the function, its parameters,
-        and errors supplied.
-        If float, will be used to compute the interval.
-    dfe: None or float, default: None
+    dfe: {None, float}, optional, default: None
         Only used if distribution == "t" to supply the error degrees of freedom.
 
     Returns
     ----------
-    list of 2 arrays each of shape (m,) containing the lower and upper bounds of the
-    desired interval
+    list of 2 arrays each of shape (n_samples,) containing the lower and upper bounds
+      of the desired interval.
     """
 
     # Gets significance level.

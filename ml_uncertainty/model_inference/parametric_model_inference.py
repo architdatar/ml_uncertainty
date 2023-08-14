@@ -1,24 +1,9 @@
-"""
-DOF calculation: Talk by Hui Zou (https://hastie.su.domains/TALKS/enet_talk.pdf)
+"""Parametric model inference class"""
 
-1. Create tests for elastic net model. 
-    Degrees of freedom: ESL Pg 64 and 68
-2. Create functions correspondingly.
-3. Test that the parameter errors are being fit correctly.
-4. Test that the prediction intervals are computed correctly.
-5. Compare with statsmodels.
-
-# TODO: Write proper documentation.
-# TODO: Enable other non-parametric tests for cases where
-        large sample approximation does not hold.
-        easily.
-# TODO: Enable model signficance tests.
-# TODO: Benchmark degrees of freedom for regularized linear regression with sklearn.
-"""
+# TODO: Benchmark custom regularization.
+# TODO: Benchmark degrees of freedom for model with intercept w.r.t statsmodels.
 
 import autograd.numpy as np
-
-# import numpy as np
 from autograd import jacobian
 from autograd import elementwise_grad as egrad
 import pandas as pd
@@ -40,22 +25,24 @@ check_type_and_dtype = ErrorPropagation.check_type_and_dtype
 
 class ParametricModelInference:
     """
-    Contains a group of methods to get model inference from models in scikit-learn
-    NOTE: The functions get_J, get_H are adopted from
-    https://github.com/sriki18/adnls/blob/master/adnls.py#L92.
-    And the formulae are taken from Niclas Borlin's lecture slides.
-    https://www8.cs.umu.se/kurser/5DA001/HT07/lectures/lsq-handouts.pdf
-    """
+    Utility to get model inference for parametric models.
 
-    """
-    Procedure:
-    1. Initialize this with a sklearn fitted object, and training data. 
-    2. Check that the object is fitted. Because we will not refit the model.
-    3. For now, try this for linear regression and elastic net models. We can expand this later.
-    4. For each such instance, obtain the jacobian matrix using the autograd library. 
-    5. Once the Jacobian is obtained, we can get parameter standard errors and CIs.
-    6. We can get the confidence / prediction intervals. 
-    7. Extend this to other linear models in sklearn as need requires. 
+    Can be used to get parameter standard errors and prediction/
+    confidence intervals for samples.
+
+    Examples:
+    ---------
+    See
+        examples/non_linear_regression_quadratic.py
+        examples/non_linear_regression_arrhenius.py
+        examples/parametric_model.py
+
+    References:
+    -----------
+    1. The functions get_J, get_H are adopted from
+        https://github.com/sriki18/adnls/blob/master/adnls.py#L92.
+    2. The formulae are taken from Niclas Borlin's lecture slides.
+    https://www8.cs.umu.se/kurser/5DA001/HT07/lectures/lsq-handouts.pdf
     """
 
     def __init__(self):
@@ -74,51 +61,153 @@ class ParametricModelInference:
         X_train,
         y_train,
         estimator=None,
+        y_train_weights=None,
         model=None,
         model_kwargs=None,
+        intercept=None,
+        best_fit_params=None,
         residual=None,
         residual_kwargs=None,
         loss=None,
         loss_kwargs=None,
         regularization=None,
-        intercept=None,
-        best_fit_params=None,
         l1_penalty=None,
         l2_penalty=None,
-        y_train_weights=None,
+        custom_reg=None,
+        custom_reg_kwargs=None,
         model_dof=None,
     ):
         """Sets up model inference for the fitted model.
 
-        Validates models, inputs and raises errors if necessary.
+        Validates models, corresponding inputs and raises errors if necessary.
+        Computes degrees of freedom, resdual mean squared error, and
+        the variance-covariance matrix which are important to analyzing the model.
 
         Parameters
         ----------
-        estimator:
-            If sklearn estimators are used, the intercept is treated as different
-            parameter via the "fit_intercept" argument. But, for accurate error
-            propagation, the intercept_ must also be treated as a parameter
-            (as done in statsmodels). Thus, if fit_intercept is True, we append
-            the intercept_ parameter to the coefs_ to get the "best_fit_params"
-            and perform error analysis accordingly.
-        y_train_weights:
+        X_train: array of shape (n_training_examples, n_dimensions)
+            Training data
+        y_train: array of shape (n_training examples, )
+            Training targets
+        estimator: {None,
+                    sklearn.linear_model.LinearRegression,
+                    sklearn.linear_model.ElasticNet,
+                    ml_uncertainty.non_linear_regression.NonLinearRegression,
+                    }, optional, default=None
+
+            If the model is fit through one of the estimators in
+                self.__estimators_implemented, the fitted object can be passed
+                directly. Several required attributes such as model-model_dof.
+                will be inferred automatically.
+                Else, these will have to be explicity provided.
+
+            NOTE: Scikit-learn linear models treats the intercept are a different
+            parameter from the rest of the model coefficients. It can be fitted
+            via the fit_incetercept_=True argument.
+            But, for accurate error propagation, the intercept_ must be treated
+            as a parameter (as done in statsmodels).
+
+            Thus, for sklearn models, if fit_intercept_=True, we append the
+            "intercept_" parameter to the "coefs_" parameter to construct the
+            "best_fit_params" and perform error analysis accordingly.
+        y_train_weights: array of shape (n_training examples, )
+            Weights of training targets. Often used when the variances of the
+             distributions from which they are drawn substantially different.
+        model: {None, callable}, optional, default=None
+            If callable: callable with inputs (X, coefs_, **model_kwargs) and output y
+                Function defining how the predictor variables relate to the response.
+                X: numpy array of shape (n_examples, n_dimensions)
+                coefs_: numpy array of shape (n_parameters, )
+                **model_kwargs: additional keyword arguments for the model.
+                y: numpy array of shape (n_examples,)
+        model_kwargs: {None, dict}, optional, default=None
+            If dict: Dictionary of model keyword arguments.
+        intercept: {None, float}, optional, default=None
+            If the model has an intercept.
+        best_fit_params: {None, array}, optional, default: None
+            Best fit parameters of the model fit.
+            If array:
+                Array of shape (n_parameters,).
+        residual: {None, callable, str}, optional, default:None
+            Defines how to compute residuals.
+                If callable (function): It must have its arguments as y_pred, y and
+                    return residuals. Each of y_pred, y, and residuals must be a 1-D
+                    array of shape (n_examples,).
+                If str: specifies what form of residual function to use.
+                    As of now, we only support "ordinary" which defines the residual
+                    as residual = y_hat - y.
+        residual_kwargs: dict, optional, default:None
+            Dictionary of residual keyword arguments.
+        loss: {None, callable}, optional, default=None
+            Defines how loss term in loss function is computed.
+            If callable:
+                Function with input arguments  residuals (array of shape (n_examples,))
+                and other keyword arguments and return float.
+                    NOTE: If there is regularization in the loss term, please specify
+                    it through the regularization parameters below. Else, the degrees
+                    of freedom computation will be incorrect.
+        loss_kwargs: {None, dict}, optional, default:None
+            Keyword arguments for the loss function.
+        regularization: {None, str}, optional, default: None
+            Specifies regularization used in the model.
+            Used to compute degrees of freedom and variance-covariance matrix.
+            If str: specify one of
+                "none": No regularization
+                "l1": L1 regularization (LASSO)
+                "l2": L2 regularization (Ridge)
+                "l1+l2": L1 + L2 regularization (elastic net)
+                "custom": custom regularization (see custom regulazrization args below)
+                    Warning: In this case, please specify model degrees of freedom
+                    explicity as that calculation is not implemented here.
+        l1_penalty: {None, float}, optional, default:None
+            Specifies l1_penalty to be used. See Notes below.
+            Only considered if regularization is among {"l1", "l1+l2"}.
+        l2_penalty: {None, float}, optional, default:None
+            Specifies l2_penalty to be used. See Notes below.
+            Only considered if regularization is among {"l2", "l1+l2"}.
+        custom_reg: {None, callable}, optional, default: None
+            Only considered if regularization=="custom". Else, ignored.
+            If callable, function with inputs as (coefs_, **custom_reg_kwargs)
+            and outputs a float.
+                coefs_: array of shape (n_paramters,) (same as best_fit_params)
+        custom_reg_kwargs: {None, dict}, optional, default:None
+            Only considered if regularization=="custom". Else, ignored.
+            Optional arguments for the function custom_reg.
+        model_dof: {None, float}, optional, default: None
+            Model degrees of freedom.
+            If None: Computed interally using class functions.
+            If float: Used directly.
+
+        Notes:
+        -------
+        1. Loss function is constructed as
+                loss = loss_term + L1_penalty * L1_norm(coefs_)
+                        + l2_penalty * L2_norm(coefs_)
+            If regularization == "custom":
+                loss = loss_term + custom_reg(coefs_, **custom_reg_kwargs)
+        2. For L1 loss: The derivatives are an approximation.
+            Autograd does not differenciate L1 norm, so, for the purposes of
+            computing the derivative, we approximate it as L2 norm.
+            The errors between the two are small. See benchmarking/L1_v_L2_loss.py
         """
 
         self.X_train = X_train
         self.y_train = y_train
+        self.y_train_weights = y_train_weights
         self.estimator = estimator
         self.model = model
         self.model_kwargs = model_kwargs
+        self.intercept = intercept
+        self.best_fit_params = best_fit_params
         self.residual = residual
         self.residual_kwargs = residual_kwargs
         self.loss = loss
         self.loss_kwargs = loss_kwargs
         self.regularization = regularization
-        self.intercept = intercept
-        self.best_fit_params = best_fit_params
         self.l1_penalty = l1_penalty
         self.l2_penalty = l2_penalty
-        self.y_train_weights = y_train_weights
+        self.custom_reg = custom_reg
+        self.custom_reg_kwargs = custom_reg_kwargs
         self.model_dof = model_dof
 
         # Validate that the estimators, etc. are correctly specified.
@@ -170,14 +259,7 @@ class ParametricModelInference:
                 + self.l2_penalty * np.linalg.norm(coefs_, ord=2) ** 2
             )
         elif self.regularization == "custom":
-            # TODO: Enable custom regularization
-            raise NotImplementedError(
-                "Custom regularization not implemented as of \
-                                      this version. Will be implemented in future. \
-                                      Please reconstruct this function externally as \
-                                      shown in examples."
-            )
-
+            loss = loss_term + self.custom_reg(coefs_, **self.custom_reg_kwargs)
         return loss
 
     def _validate_input_arguments(self):
@@ -214,18 +296,23 @@ class ParametricModelInference:
             ):
                 raise ValueError(
                     "At least one of model_function,\
-                        residual_function, loss_function, best fit params \
+                        residual_function, loss_function, \
+                        best fit params, regularization \
                         is not defined.\
                         Please provide all the above as it is necessary for \
                         model inference."
                 )
 
-            # TODO: Further validate these functions by checking that they yield the
-            # desired values in the desired formats.
-            # TODO: Also validate other parameters related to best fit and regularization.
-
         # Validate y_train_weights
         self._validate_y_train_weights(self.y_train_weights, self.y_train)
+
+        # If custom regularization, make sure that the model DOFs are provided.
+        if self.regularization == "custom":
+            self._validate_custom_reg(
+                self.custom_reg, self.custom_reg_kwargs, self.model_dof
+            )
+        # Validate model_dof
+        self._validate_model_dof(self.model_dof)
 
     def _validate_X(self, X):
         """Checks that X is an ndarray of 2 dimensions and shape (m, n ).
@@ -304,7 +391,7 @@ class ParametricModelInference:
                 )
                 self.model = linear_model_with_intercept
             else:
-                self.intercept = self.estimator.intercept_
+                self.intercept = None
                 self.best_fit_params = self.estimator.coef_
                 self.model = linear_model
 
@@ -321,7 +408,15 @@ class ParametricModelInference:
             self.loss_kwargs = dict(sample_weight=self.y_train_weights)
 
         elif type(self.estimator) == NonLinearRegression:
-            self.intercept = self.estimator.intercept_
+            self.intercept = 0
+            # The fact that this is set to 0 and not None is right.
+            # For NonLinearRegression, we simply consider the intercept as
+            # another parameter. So, it is still not clear
+            # whether we should "lose" one degree of freedom for the intercept
+            # or not. For now, using this approach, we effectively assume
+            # that we do. As such, this is any anyways an approximation because
+            # for true non-linear regression, the degrees of freedom would be
+            # computed from a different equation. See ESL Pg 233.
             self.best_fit_params = self.estimator.coef_
             self.model = self.estimator.model
             self.residual = self.estimator.residual
@@ -350,8 +445,55 @@ class ParametricModelInference:
                 y_train_weights.shape == y_train.shape
             ), "y_train_weights must be None or be the same shape as y_train."
 
+    def _validate_custom_reg(self, custom_reg, custom_reg_kwargs, model_dof):
+        """
+        1. If regularization is custom: check that the custom reg function
+            works correctly.
+        2. Check that the model dofs are specified correctly.
+        """
+
+        intercept = self.intercept
+        best_fit_params = self.best_fit_params
+
+        if intercept is None:  # Intercept wasn't fit separately.
+            coef_ = best_fit_params
+        else:
+            coef_ = best_fit_params[1:]
+
+        # Check that the custom reg function works correctly.
+        reg_term = custom_reg(coef_, custom_reg_kwargs)
+
+        if type(reg_term) != float:
+            raise ValueError(
+                "custom_reg call did not yield float.\
+                             Please provide correct custom_reg function."
+            )
+
+        if model_dof is None:
+            raise ValueError(
+                "Regularization is set to 'custom' but \
+                             'model_dof' has not been specified. \
+                             Please specify it explicitly."
+            )
+
+    def _validate_model_dof(self, model_dof):
+        """Either None or float or int"""
+        if model_dof is not None:
+            if type(model_dof) not in [int, float]:
+                raise ValueError(
+                    "model_dof does not have correct type.\
+                                 Either it should be None or float or int."
+                )
+
     def _set_model_dof(self):
-        """Computes model degrees of freedom."""
+        """Computes model degrees of freedom.
+
+        References:
+        1. https://online.stat.psu.edu/stat462/node/131/
+        2. https://www.statsmodels.org/dev/generated/statsmodels.
+            regression.linear_model.RegressionResults.html#statsmodels.
+            regression.linear_model.RegressionResults
+        """
 
         model_dof = self.model_dof
         regularization = self.regularization
@@ -406,21 +548,7 @@ class ParametricModelInference:
         self.error_dof = self.X_train.shape[0] - 1 - self.model_dof
 
     def _set_sigma(self):
-        """Standard deviation of the fit.
-
-        Estimate standard deviation from the residual vector.
-
-        Parameters
-        ----------
-        residual_function: callable
-            Function to compute residuals for the training data.
-        error_dof: float
-            Error / residual degrees of freedom for the fit.
-        Returns
-        -------
-        sig
-            Estimated standard deviation.
-        """
+        """Computes residual mean squared error of the fit."""
 
         res = self.residual_function(
             self.X_train,
@@ -449,17 +577,29 @@ class ParametricModelInference:
     ) -> np.ndarray:
         """Jacobian of residuals.
 
-        Residuals (prediction - data) of the fit of interest.
-
         Parameters
         ----------
-
-        X
-            The `np.ndarray` of paramaters used to compute the Jacobian.
+        residual_function: callable
+            Defines how to compute residuals.
+            Arguments: (X, best_fit_params, y, model_kwargs, **residual_kwargs)
+                and return residuals.
+                Each of y, and residuals must be a 1-D
+                array of shape (n_examples,).
+                The specifications of other input parameters are described below.
+        best_fit_params: arrray of shape (n_parameters,)
+            Best fit parameters of the model fit.
+        X: array of shape (n_samples, n_dimensions)
+            Input array
+        y: array of shape (n_samples,)
+            Targets
+        model_kwargs: dict
+            Keyword arg dict for the model to relating y to X.
+        residual_kwargs:
+            Keyword arguments for residual_function.
 
         Returns
         -------
-        J
+        J: array of shape (n_samples, n_parameters)
             Jacobian of residuals.
         """
 
@@ -489,14 +629,31 @@ class ParametricModelInference:
 
         Parameters
         ----------
-        x
-            The `np.ndarray` of paramaters used to compute the Hessian.
+        loss_function: callable with arguments (X, coefs_, y, model_kwargs,
+                                                residual_kwargs, loss_kwargs).
+                        Returns float
+                    X: see below
+                    coefs_: same as best_fit_params below
+                    y, model_kwargs, model_kwargs, residual_kwargs: see below
+        X: array of shape (n_samples, n_dimensions)
+            Input array
+        best_fit_params: arrray of shape (n_parameters,)
+            Best fit parameters of the model fit.
+        y: array of shape (n_samples,)
+            Targets
+        model_kwargs: dict
+            Keyword arg dict for the model to relating y to X.
+        residual_kwargs: dict
+            Keyword arguments for residual_function.
+        loss_kwargs:
+            Keyword arguments for loss function.
 
         Returns
         -------
-        H
+        H: array of shape (n_parameters, n_parameters)
             Hessian of the objective function.
         """
+
         coefs_ = best_fit_params
 
         H = jacobian(
@@ -512,28 +669,15 @@ class ParametricModelInference:
             )
         )(coefs_)
 
-        # TODO:1. For linear models and ridge, there is a closed form
-        # solution. Var[b]=σ2(X′X)−1.
-        # https://stats.stackexchange.com/questions/68151/how-to-derive-variance-covariance-matrix-of-coefficients-in-linear-regression
-        # Ridge: https://online.stat.psu.edu/stat857/node/155/ under Properties of Ridge estimator.
-        # 2. Allow users to compute Hessian through a first-order approximation for
-        # functions that might not be 2-times differenciable. Refer to Niclas
-        # Borgin's lectures.
-
         return H
 
     def get_vcov(self) -> np.ndarray:
         r"""Variance-covariance matrix of parameters.
 
         Estimate variance-covariance matrix of the provided parameters.
-        The formula used is $$ D = \sigma^2 (\nabla^2 f(x^*))^{-1}$$ as described in the
-        lecture notes of Niclas Börlin.
+        The formula used is $$ D = \sigma^2 (\nabla^2 f(x^*))^{-1}$$ as described in
+        the lecture notes of Niclas Börlin.
         https://www8.cs.umu.se/kurser/5DA001/HT07/lectures/lsq-handouts.pdf
-
-        Parameters
-        ----------
-        x
-            The `np.ndarray` of parameters used to compute the Hessian.
 
         Returns
         -------
@@ -597,9 +741,27 @@ class ParametricModelInference:
         interval_stat=None,
         confidence_level=90.0,
         side="two-sided",
-        return_full_distribution=False,
     ):
-        """Gets model inference for the selected fitted estimator."""
+        """Gets shows parameter standard errors with appropriate intervals.
+
+        Parameters:
+        -----------
+        distribution: str, optional, {"parametric", "non-parametric"},
+                        default: "parametric"
+            Distribution of the parameter standard errors.
+        lsa_assumption: bool, optional, default=False
+            Whether or not to invoke the large sample approximation.
+            If True, assumes the distribution to be normal.
+            Else, assumes the distribution to be t distribution with error_dof
+            degrees of freedom.
+        interval_stat: {None, str}, optional, {"normal", "t"}, default: None
+            What kind of interval to return. If None: infers from the lsa_assumption
+            as described above.
+        confidence_level: float, optional, default: 90.0
+            Confidence level (0-100) of the interval returned.
+        side: str, optional, {"two-sided", "upper", "lower"}, default: "two-sided"
+            Defines the type of interval to be computed.
+        """
 
         means_array = self.best_fit_params
         std_array = self.sd_coef
@@ -616,11 +778,11 @@ class ParametricModelInference:
             # avoid confusion. Instead, we use "interval_stat". So,
             # if it is not specifically mentioned, we use 'normal' if LSA is
             # taken to be true, else we use "t" test.
-
-            if lsa_assumption:
-                interval_stat = "normal"
-            else:
-                interval_stat = "t"
+            if interval_stat is None:
+                if lsa_assumption:
+                    interval_stat = "normal"
+                else:
+                    interval_stat = "t"
 
             interval_array = compute_intervals(
                 means_array,
@@ -634,8 +796,8 @@ class ParametricModelInference:
         else:
             raise NotImplementedError(
                 "'distribution' argument not permissible. \
-                                      Please provde it as 'parameteric' or\
-                                      'non-parametric'."
+                    Please provde it as 'parameteric' or\
+                    'non-parametric'."
             )
 
         # Output dictionary.
@@ -648,10 +810,7 @@ class ParametricModelInference:
         # Convert into dataframe
         param_err_df = pd.DataFrame.from_dict(param_err_dict)
 
-        if return_full_distribution:
-            return param_err_df, means_array, std_array
-        else:
-            return param_err_df
+        return param_err_df
 
     def get_intervals(
         self,
@@ -666,6 +825,74 @@ class ParametricModelInference:
         side="two-sided",
         dfe=None,
     ):
+        r"""Gets intervals for sample data.
+
+        Uses model parameter errors as well as uncertainties in input data
+        to compute the desired intervals.
+
+        Parameters:
+        -----------
+        X: array of shape (n_samples, n_dimensions)
+            Input array
+        X_err: {None, np.ndarray}, optional, default: None
+            Herer, m : number of samples,
+            n : number of features
+            p: number of parameters
+
+            If X_err is array:
+                1. If X_err is a 1-D vector of shape (n,)
+                Standard errors for features in X are specified.
+                Errors are equal for all examples and are uncorrelated with each other.
+                2. If X_err is a 2-D vector of shape (m, n)
+                    Standard errors are specified.
+                    These are different across samples but assumed to be
+                    uncorrelated across features.
+                3. If X_err is a 2-D array of shape (n, n)
+                    Covariance matrix for errors are specified.
+                    Errors are equal for each example but those for different
+                    features might be correlated. The $i, j$ th element of matrix
+                    represents $cov(X_err_i, X_err_j)$ representing the covariance
+                    of the errors $i, j$ th feature of the data.
+                4. If X_err is a tensor of shape (m, n, n)
+                    For each example, the nxn matrix denotes the covariance matrix of
+                    errors in X.
+        X_err_denotes_feature_correlation: bool, optional, default: False
+            In the rare case that m=n, X_err will computed according to
+            case 2 unless this parameter is
+            explicity set to True.
+        y_weights: {None, array}, optional, default: None
+            If array: must have shape (n_samples, )
+            Weights of targets. Often used when the variances of the
+             distributions from which they are drawn substantially different.
+             Used to compute uncertainty of the prediction through
+             $\sigma_i = \sigma / weight_i $.
+        type_: str, {"confidence", "prediction"}, default: "confidence"
+            Defines the type of interval to compute.
+        distribution: str, {"normal", "t"}, default: "normal"
+            The type of distribution that the desired interval is from.
+        lsa_assumption: bool, optional, default=False
+            Whether or not to invoke the large sample approximation.
+            If True, assumes the distribution to be normal.
+            Else, assumes the distribution to be t distribution with error_dof
+            degrees of freedom.
+        confidence_level: float, default: 90.0
+            Percentage of the distribution to be enveloped by the interval.
+            Example: A value of 90 means that you wish to compute a 90% interval.
+        side: str, "two-sided", "lower", "upper", default: "two-sided"
+            Defines the type of interval to be computed.
+        dfe: {None, float, int}, optional, default:None
+            Error degrees of freedom of the fit.
+            Only needed to compute prediction intervals. Ignored for "confidence".
+            If None, uses the self.error_dof attribute; i.e., the computed
+            error degrees of the model fit.
+
+        Returns:
+        --------
+        df_int: pandas.DataFrame
+            Dataframe consisting of mean (predicted values),
+                std (standard error of the interval (prediction / confidence))
+                lower_bound, upper_bound: lower, upper bound of the desired intervals
+        """
 
         # Check that the parameter SE have been predicted.
         if not hasattr(self, "sd_coef"):
