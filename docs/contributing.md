@@ -4,12 +4,14 @@ Topics
 ## Non-Linear Regression
 
 1. Add capabilities for regularization:Use scipy.optimize.minimize function to optimize and build the loss function as shown in ParametricModelInference.
-2. Enable non-explicit constrained optimization: Use scipy.optimize.minimize to optimize. 
+2. Enable non-explicit constrained optimization: Use scipy.optimize.minimize to optimize - Create loss function as in ParametricModelInference class.
 3. Accurate degree of freedom calculations for non-linear models: Currently, the model degrees of freedom are computed by considering the number of model parameters. But for true non-linear functions, these should be computed as shown in Hastie et al, [Elements of Statistical Learning](https://hastie.su.domains/ElemStatLearn/) Pg 233. 
 4. For L2 regularization for non-linear models, see Eq. 7.34 on Pg 233 of Hastie et al, [Elements of Statistical Learning](https://hastie.su.domains/ElemStatLearn/).  
 
-For 3, 4: Develop code using simulations, see documentation for ensemble model 
+    For 3, 4: Develop code using simulations, see documentation for ensemble model 
 inference degrees of freedom calculation.
+
+5. Implement cross-validation with sklearn grid search. 
 
 
 ## Parametric model inference

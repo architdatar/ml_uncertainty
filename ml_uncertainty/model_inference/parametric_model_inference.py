@@ -52,6 +52,8 @@ class ParametricModelInference:
 
         self.__estimators_implemented = [
             sklearn.linear_model._base.LinearRegression,
+            sklearn.linear_model.Lasso,
+            sklearn.linear_model.Ridge,
             sklearn.linear_model._coordinate_descent.ElasticNet,
             NonLinearRegression,
         ]
@@ -352,23 +354,9 @@ class ParametricModelInference:
         required parameters.
         """
 
-        # Get the Jacobian matrix for this model.
         if type(self.estimator) == sklearn.linear_model._base.LinearRegression:
-            # If model if fitted with intercept, add intercept to best_fit_params
-            # as the first argument.
-            if self.estimator.fit_intercept:
-                self.intercept = self.estimator.intercept_
-                self.best_fit_params = np.concatenate(
-                    (np.array([self.estimator.intercept_]), self.estimator.coef_)
-                )
-                self.model = linear_model_with_intercept
-            else:
-                self.intercept = None
-                self.best_fit_params = self.estimator.coef_
-                self.model = linear_model
 
-            self.residual = ordinary_residual
-            self.loss = least_squares_loss
+            self.__populate_sklearn_linear_attributes()
 
             # Get regularization info.
             self.regularization = "none"
@@ -379,24 +367,37 @@ class ParametricModelInference:
             self.residual_kwargs = dict()
             self.loss_kwargs = dict(sample_weight=self.y_train_weights)
 
-        elif (
-            type(self.estimator) == sklearn.linear_model._coordinate_descent.ElasticNet
-        ):
-            # If model if fitted with intercept, add intercept to best_fit_params
-            # as the first argument.
-            if self.estimator.fit_intercept:
-                self.intercept = self.estimator.intercept_
-                self.best_fit_params = np.concatenate(
-                    (np.array([self.estimator.intercept_]), self.estimator.coef_)
-                )
-                self.model = linear_model_with_intercept
-            else:
-                self.intercept = None
-                self.best_fit_params = self.estimator.coef_
-                self.model = linear_model
+        elif type(self.estimator) == sklearn.linear_model.Lasso:
+            self.__populate_sklearn_linear_attributes()
+
+            # Get regularization info.
+            self.regularization = "l1"
+            self.l1_penalty = self.estimator.alpha
+            self.l2_penalty = None
+
+            self.model_kwargs = dict()
+            self.residual_kwargs = dict()
+            self.loss_kwargs = dict(sample_weight=self.y_train_weights)
+
+        elif type(self.estimator) == sklearn.linear_model.Ridge:
+            self.__populate_sklearn_linear_attributes()
 
             self.residual = ordinary_residual
             self.loss = least_squares_loss
+
+            # Get regularization info.
+            self.regularization = "l2"
+            self.l1_penalty = self.estimator.alpha
+            self.l2_penalty = None
+
+            self.model_kwargs = dict()
+            self.residual_kwargs = dict()
+            self.loss_kwargs = dict(sample_weight=self.y_train_weights)
+
+        elif (
+            type(self.estimator) == sklearn.linear_model._coordinate_descent.ElasticNet
+        ):
+            self.__populate_sklearn_linear_attributes()
 
             # Get regularization info.
             self.regularization = "l1+l2"
@@ -410,7 +411,8 @@ class ParametricModelInference:
         elif type(self.estimator) == NonLinearRegression:
             if self.estimator.fit_intercept:
                 self.intercept = self.estimator.intercept_
-                self.best_fit_params = self.estimator.coef_
+                self.best_fit_params = self.estimator.coef_  # In this case, the coef_
+                # includes the intercept.
             else:
                 self.intercept = None
                 self.best_fit_params = self.estimator.coef_
@@ -429,6 +431,25 @@ class ParametricModelInference:
             self.model_kwargs = self.estimator.model_kwargs_dict
             self.residual_kwargs = self.estimator.residual_kwargs_dict
             self.loss_kwargs = dict(sample_weight=self.y_train_weights)
+
+    def __populate_sklearn_linear_attributes(self):
+        """Populate for sklearn linear attributes."""
+
+        # If model if fitted with intercept, add intercept to best_fit_params
+        # as the first argument.
+        if self.estimator.fit_intercept:
+            self.intercept = self.estimator.intercept_
+            self.best_fit_params = np.concatenate(
+                (np.array([self.estimator.intercept_]), self.estimator.coef_)
+            )
+            self.model = linear_model_with_intercept
+        else:
+            self.intercept = None
+            self.best_fit_params = self.estimator.coef_
+            self.model = linear_model
+
+        self.residual = ordinary_residual
+        self.loss = least_squares_loss
 
     def _validate_y_train_weights(self, y_train_weights, y_train):
         """Runs the same validation protocol as y and then checks if they are the same
@@ -458,9 +479,9 @@ class ParametricModelInference:
             coef_ = best_fit_params[1:]
 
         # Check that the custom reg function works correctly.
-        reg_term = custom_reg(coef_, custom_reg_kwargs)
+        reg_term = custom_reg(coef_, **custom_reg_kwargs)
 
-        if type(reg_term) != float:
+        if type(reg_term) != np.float64:
             raise ValueError(
                 "custom_reg call did not yield float.\
                              Please provide correct custom_reg function."

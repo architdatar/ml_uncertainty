@@ -60,7 +60,7 @@ class NonLinearRegression(RegressorMixin, BaseEstimator):
     Attributes:
     -----------
     coef_: array of shape (n_parameters, )
-        Best parameters of the fit.
+        Best parameters of the fit including the intercept where applicable.
 
     Notes:
     ------
@@ -136,11 +136,11 @@ class NonLinearRegression(RegressorMixin, BaseEstimator):
         y: array of shape (n_examples, )
             Target values.
         p0: {None, array of shape (n_parameters,)}, optional, default: None
-            Array specifying intitial estimate of the best fit parameters.
+            Array specifying initial estimate of the best fit parameters
+            including the intercept.
             If None, an array of shape (p0_length,) of random values between
             0 and 1 from a uniform distribution will be generated and use as the
             initial guess.
-            If p0 is None and p0_length is also None, an error will be raised.
         sample_weight: {None, array of shape (n_samples,)}, optional, default: None
             Individual weights for each sample.
 
@@ -148,6 +148,10 @@ class NonLinearRegression(RegressorMixin, BaseEstimator):
         --------
         self: object
             Fitted estimator
+
+        Notes:
+        -----
+        1. If p0 is None and p0_length is also None, an error will be raised.
         """
 
         # Validate data
