@@ -408,16 +408,13 @@ class ParametricModelInference:
             self.loss_kwargs = dict(sample_weight=self.y_train_weights)
 
         elif type(self.estimator) == NonLinearRegression:
-            self.intercept = 0
-            # The fact that this is set to 0 and not None is right.
-            # For NonLinearRegression, we simply consider the intercept as
-            # another parameter. So, it is still not clear
-            # whether we should "lose" one degree of freedom for the intercept
-            # or not. For now, using this approach, we effectively assume
-            # that we do. As such, this is any anyways an approximation because
-            # for true non-linear regression, the degrees of freedom would be
-            # computed from a different equation. See ESL Pg 233.
-            self.best_fit_params = self.estimator.coef_
+            if self.estimator.fit_intercept:
+                self.intercept = self.estimator.intercept_
+                self.best_fit_params = self.estimator.coef_
+            else:
+                self.intercept = None
+                self.best_fit_params = self.estimator.coef_
+
             self.model = self.estimator.model
             self.residual = self.estimator.residual
             self.loss = (

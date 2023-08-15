@@ -28,7 +28,7 @@ def fit_quadratic_model():
     )
 
     # Non-linear regression.
-    nlr = NonLinearRegression(model, p0_length=3)
+    nlr = NonLinearRegression(model, p0_length=3, fit_intercept=True)
 
     nlr.fit(X_expt, y_expt)
 
@@ -49,7 +49,8 @@ def test_quadratic_model(fit_quadratic_model):
     ), "Shape of fitted coefficients \
                     does not match the shape of true coeffients."
 
-    # Check tha that the predicted and true parameters are in the same order of magnitude.
+    # Check tha that the predicted and true parameters are in the same order
+    # of magnitude.
     assert (
         np.linalg.norm(nlr.coef_ - true_params) < 3
     ), "Fitted parameters are different from true parameters."

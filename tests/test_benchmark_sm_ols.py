@@ -69,7 +69,9 @@ def test_1D(get_sm_data_for_1D_test):
     ) = get_sm_data_for_1D_test
 
     # Fit with NLR.
-    nlr = NonLinearRegression(model=linear_model, p0_length=true_params.shape[0])
+    nlr = NonLinearRegression(
+        model=linear_model, p0_length=true_params.shape[0], fit_intercept=False
+    )
 
     nlr.fit(X_expt, y_expt)
 
@@ -85,7 +87,7 @@ def test_1D(get_sm_data_for_1D_test):
 
     # Compare sm_best_fit_params with nlr.coef_
     assert (
-        np.linalg.norm(sm_best_fit_params - nlr.coef_) < 1e-3
+        np.linalg.norm(sm_best_fit_params - inf.best_fit_params) < 1e-3
     ), "Best fit parameters not equal"
 
     # Compare pred_sm_df with df_feature_imp

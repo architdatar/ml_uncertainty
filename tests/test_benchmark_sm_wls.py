@@ -59,7 +59,7 @@ def test_WLS(set_up_test):
     # Quantify weights
     weights = 1.0 / w ** 2
 
-    nlr = NonLinearRegression(model=model, p0_length=2)  # Parameter length is 2.
+    nlr = NonLinearRegression(model=model, p0_length=2, fit_intercept=True)
 
     nlr.fit(X_arr, y, sample_weight=1.0 / w ** 2)
 
@@ -77,7 +77,9 @@ def test_WLS(set_up_test):
 
     # Set up tests to compare with statsmodels
     # Compare sm_best_fit_params with nlr.coef_.
-    assert np.linalg.norm(sm_params - nlr.coef_) < 1e-1, "Best fit parameters not equal"
+    assert (
+        np.linalg.norm(sm_params - inf.best_fit_params) < 1e-1
+    ), "Best fit parameters not equal"
 
     # Compare pred_sm_df with df_feature_imp
     assert (

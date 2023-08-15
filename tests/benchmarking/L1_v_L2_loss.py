@@ -8,7 +8,7 @@ So, to estimate this, we have instead used the L2 norm and its derivatives.
 In this example, we see whether that assumption is justified.
 """
 #%%
-#import numpy as np
+# import numpy as np
 import autograd.numpy as np
 import matplotlib.pyplot as plt
 from autograd import jacobian
@@ -17,8 +17,7 @@ import matplotlib.pyplot as plt
 
 
 def l1_norm(params):
-    """Actual L1 norm
-    """
+    """Actual L1 norm"""
 
     return np.linalg.norm(params, ord=1)
 
@@ -28,7 +27,8 @@ def l2_norm(params):
 
     return np.linalg.norm(params, ord=2)
 
-#x = np.arange(-100, 100)
+
+# x = np.arange(-100, 100)
 x = np.array([-0.0001, 0.15])
 
 # Taking the Jacobians in each case:

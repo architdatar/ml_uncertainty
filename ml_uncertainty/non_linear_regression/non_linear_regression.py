@@ -34,7 +34,7 @@ class NonLinearRegression(RegressorMixin, BaseEstimator):
     p0_length: {None, int}, optional
         If None: User must provide an initial guess for the model parameters when
             calling 'fit' method.
-        If int: Number of model parameters (n_parameters).
+        If int: Number of model parameters (n_parameters) including the intercept.
     model_kwargs_dict: dict, optional, default={}
         Dictionary of model keyword arguments.
     residual: {callable, str}, optional, default: "ordinary"
@@ -53,6 +53,9 @@ class NonLinearRegression(RegressorMixin, BaseEstimator):
     copy_X: bool, optional, default=True
         Specified if X should be deep-copied during 'fit', This prevents X input to the
         function from undergoing any change during the fit.
+    fit_intercept: bool, optional, default=False
+        Whether the first term fit is the model intercept.
+
 
     Attributes:
     -----------
@@ -61,11 +64,13 @@ class NonLinearRegression(RegressorMixin, BaseEstimator):
 
     Notes:
     ------
-    1. Only supports single target variable.
-    2. Uses only a single processor to fit. Parallelization not implemented.
-    3. Handles dense matrices only; no support for sparse matrices.
-    4. No regularization available.
-    5. Only bounded constraints allowed in scipy.optimize.least_squares are allowed.
+    1. The fit_intercept=True behavior is slightly different from sklearn.
+        Here, the self.coef_ variable includes the intercept if it is present.
+    2. Only supports single target variable.
+    3. Uses only a single processor to fit. Parallelization not implemented.
+    4. Handles dense matrices only; no support for sparse matrices.
+    5. No regularization available.
+    6. Only bounded constraints allowed in scipy.optimize.least_squares are allowed.
         See documentation.
 
     Examples:
@@ -84,12 +89,14 @@ class NonLinearRegression(RegressorMixin, BaseEstimator):
         residual_kwargs_dict={},
         least_sq_kwargs_dict={},
         copy_X=True,
+        fit_intercept=False,
     ):
         self.model = model
         self.p0_length = p0_length
         self.model_kwargs_dict = model_kwargs_dict
         self.least_sq_kwargs_dict = least_sq_kwargs_dict
         self.copy_X = copy_X
+        self.fit_intercept = fit_intercept
 
         # Initialize a function modifying the model as required.
         self.func = self.model
@@ -191,7 +198,13 @@ class NonLinearRegression(RegressorMixin, BaseEstimator):
         )
 
         self.fitted_object = res_ls
+
         self.coef_ = res_ls.x
+
+        if self.fit_intercept:
+            self.intercept_ = res_ls.x[0]
+        else:
+            self.intercept_ = None
 
     def _validate_X(self, X):
         """Checks that X is an ndarray of 2 dimensions and shape (m, n ).
@@ -254,7 +267,7 @@ class NonLinearRegression(RegressorMixin, BaseEstimator):
         params: {None, array of shape (n_parameters,)}, optional, default=None
             Model parameters.
             If None:
-                parameters = self.coef_ attribute.
+                Will use fitted model parameters.
                 If estimator is not fitted, an error will be raised.
         **model_kwargs:
             Optional keyword arguments to be passed to the model.
