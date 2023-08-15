@@ -69,7 +69,7 @@ beta_arr = np.array(beta)
 y_model = model(X_arr, np.array(beta_arr))
 
 # Fit using NLR
-nlr = NonLinearRegression(model=model, p0_length=beta_arr.shape[0])
+nlr = NonLinearRegression(model=model, p0_length=beta_arr.shape[0], fit_intercept=True)
 
 nlr.fit(X_arr, y)
 

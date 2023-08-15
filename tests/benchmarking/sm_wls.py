@@ -66,7 +66,7 @@ beta_arr = np.array(beta[:-1])
 # Quantify weights
 weights = 1.0 / w ** 2
 
-nlr = NonLinearRegression(model=model, p0_length=beta_arr.shape[0])
+nlr = NonLinearRegression(model=model, p0_length=beta_arr.shape[0], fit_intercept=True)
 
 nlr.fit(X_arr, y, sample_weight=1.0 / w ** 2)
 

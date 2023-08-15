@@ -44,7 +44,7 @@ y_expt = model(X_expt, true_params) + np.random.normal(0, 10, size=X_expt.shape[
 
 #%%
 # Non-linear regression.
-nlr = NonLinearRegression(model, p0_length=3)
+nlr = NonLinearRegression(model, p0_length=3, fit_intercept=True)
 
 nlr.fit(X_expt, y_expt)
 

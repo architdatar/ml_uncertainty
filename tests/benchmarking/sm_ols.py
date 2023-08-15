@@ -46,7 +46,7 @@ X_arr = x.reshape((-1, 1))
 y_model = model(X_arr, beta)
 
 # Fit using NLR
-nlr = NonLinearRegression(model=model, p0_length=beta.shape[0])
+nlr = NonLinearRegression(model=model, p0_length=beta.shape[0], fit_intercept=True)
 
 nlr.fit(X_arr, y)
 
