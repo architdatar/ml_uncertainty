@@ -4,8 +4,7 @@
 import pytest
 import autograd.numpy as np
 from sklearn.datasets import make_regression
-from sklearn.linear_model import Lasso, Ridge
-from ml_uncertainty.non_linear_regression import NonLinearRegression
+from sklearn.linear_model import Lasso
 from ml_uncertainty.model_inference import ParametricModelInference
 from ml_uncertainty.model_inference.common_model_functions import (
     ordinary_residual,

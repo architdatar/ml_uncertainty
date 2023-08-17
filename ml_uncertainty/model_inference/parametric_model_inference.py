@@ -411,8 +411,8 @@ class ParametricModelInference:
         elif type(self.estimator) == NonLinearRegression:
             if self.estimator.fit_intercept:
                 self.intercept = self.estimator.intercept_
-                self.best_fit_params = self.estimator.coef_  # In this case, the coef_
-                # includes the intercept.
+                # In this case, the coef_includes the intercept.
+                self.best_fit_params = self.estimator.coef_
             else:
                 self.intercept = None
                 self.best_fit_params = self.estimator.coef_

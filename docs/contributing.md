@@ -24,6 +24,9 @@ inference degrees of freedom calculation.
     functions that might not be 2-times differenciable. Refer to Niclas Borgin's lectures.
     (J'J)
 
+## Ensemble models
+1. Create tests for other kinds of models such as gradient boosting and classification models.
+
 ## General
 1. Enable model signficance tests: 
     Analogous to F-tests for ordinary least squares regression. Implement F-tests for parametric models (with appropriate assumptions) and various distributions.
