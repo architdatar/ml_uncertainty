@@ -1,46 +1,52 @@
 r"""
 Develops utlities to get model inference for tree-based models in scikit-learn.
 
-# TODO: Create tests for model significance. Basically: is it better than 
-    the null model? 
-        1. Look at non-parametric course textbook and see which tests can
-        be used for this. Non-parametric version of F-test. 
-        2. Degrees of freedom of non-parametric models. The MC algorithm for 
-        this has been discussed in DOI: 10.1080/01621459.1998.10474094. Full paper
-        can be accessed from virtual library -> Reprints Desk. 
-        Algorithm to do so is mentioned in Pg 122, algorithm 1
-            1. Basic idea of the method is to create t perturbations in Y and 
-            measure the efects on $\hat{y}$. 
-        Results can be compared with URL: https://arxiv.org/pdf/1911.00190.pdf
-        Pg 11 and 12. 
-# TODO: Check that the model is fitted.
-# TODO: Implement a way to compute quantiles of the distributions from sample data.
-# Do away with the "stat generator function". 
-
+# TODO: Modify documentation and add proper validation.
 """
 
 # Imports
+import numpy as np
+from warnings import warn
+import pandas as pd
 from scipy.sparse import issparse
 from sklearn.base import is_classifier
-import numpy as np
+from sklearn.exceptions import DataDimensionalityWarning
+from sklearn.utils.validation import check_is_fitted
 from sklearn.ensemble._forest import (
     _get_n_samples_bootstrap,
     _generate_unsampled_indices,
 )
-from warnings import warn
-import pandas as pd
-from sklearn.exceptions import DataDimensionalityWarning
 from ..error_propagation.statistical_utils import (
     get_significance_levels,
     get_z_values,
 )
 from .gen_utils import validate_str, validate_bool, validate_float
 from copy import deepcopy
-import warnings
 
 
 class EnsembleModelInference:
-    """Provided utilities to perform inference for ensemble models."""
+    """Provides utilities to perform inference for ensemble models.
+
+    Examples:
+    ---------
+
+
+    References:
+    -----------
+    1. Confidence interval calculations are performed using the answer
+    provided by @Greg Snow in this Stackoverflow thread on the subject.
+    https://stats.stackexchange.com/questions/56895/
+    do-the-predictions-of-a-random-forest-model-have-a-prediction-interval
+    2. Prediction intervals can be computed using two methods:
+        "marginal": This is the 'OOB Prediction Interval' method proposed
+        by Zhang et al. (2020).
+            DOI: 10.1080/00031305.2019.1585288
+        "individual": This is method proposed by @Greg Snow in Ref 1.
+        The 'marginal' method is named here because it aggregates the
+        predictions from the trees. On the other hand, 'individual' considers
+        the distributions of the specific trees.
+
+    """
 
     def __init__(self):
         """Initialize the function"""
@@ -59,49 +65,79 @@ class EnsembleModelInference:
         stat_generating_function=None,
         stat_generating_function_kwargs={},
     ):
-        """Sets up model inference"""
+        """Sets up model inference and performs basic calculations.
 
-        self.X_train = X_train
-        self.y_train = y_train
-        self.estimator = estimator
-        self.use_oob_pred = use_oob_pred
-        self.variance_type_to_use = variance_type_to_use
+        Validates estimators and functions, raises errors if anything
+        is incorrect. Computes residual mean squared errors which are important
+        to getting desired intervals.
+
+        Parameters:
+        -----------
+        X_train: array of shape (n_training_examples, n_dimensions)
+            Training data
+        y_train: array of shape (n_training examples, )
+            Training targets
+
+
+        Notes:
+        ------
+        1. This implementation works for multioutput regression; i.e.,
+            y represents more than one target variable.
+            However, this approach is not recommended.
+            Instead, it is better to fit a separate random forest for each target.
+            and obtain inference accordingly.
+
+            The RandomForestRegressor class outputs identical feature importances
+            for all target variables. Thus, identical feature importances and
+            intervals are obtained for each output. This might not be right.
+        """
+
         self.copy_X_and_y = copy_X_and_y
         self.sigma = sigma
+        validate_bool(copy_X_and_y)
 
-        # Validate the inputs.
-        # Specifically, if variance_type_to_use=="individual" and distribution==None,
-        # not "normal", not a valid function:
-        # raise error.
-
-        self.X_train = self.__validate_and_transform_X(self.X_train, self.copy_X_and_y)
-
-        self.y_train = self.__validate_y_and_transform_y(
-            self.y_train, self.X_train, self.copy_X_and_y
-        )
+        self.X_train = self.__validate_and_transform_X(X_train, copy_X_and_y)
+        self.y_train = self.__validate_y_and_transform_y(y_train, X_train, copy_X_and_y)
 
         # Ensure that the estimator is a tree.
         self._confirm_estimator_is_from_ensemble(estimator)
+        # Check that the estimator is fitted.
+        check_is_fitted(estimator)
+        self.estimator = estimator
 
-        # TODO: Validate use_oob_pred and the rest
+        validate_bool(use_oob_pred)
+        self.use_oob_pred = use_oob_pred
 
-        self.n_estimators = self.estimator.n_estimators
+        validate_str(variance_type_to_use, ["marginal", "individual"])
+        self.variance_type_to_use = variance_type_to_use
 
-        # If distribution is known, assign the correct parameters.
-        if type(distribution) == str and distribution == "normal":
-            self.distribution = np.random.normal
-            self.distribution_kwargs = {}
-            self.stat_generating_function = get_z_values
-            self.stat_generating_function_kwargs = {}
-        else:
-            self.distribution = distribution
-            self.distribution_kwargs = distribution_kwargs
-            if stat_generating_function is None:
-                self.stat_generating_function = self._stat_generator
-                self.stat_generating_function_kwargs = distribution_kwargs
-            else:
-                self.stat_generating_function = stat_generating_function
-                self.stat_generating_function_kwargs = stat_generating_function_kwargs
+        self.copy_X_and_y = copy_X_and_y
+
+        self._validate_sigma(sigma)
+
+        self._validate_and_assign_distribution_attributes(
+            distribution,
+            distribution_kwargs,
+            stat_generating_function,
+            stat_generating_function_kwargs,
+        )
+
+        # Further, validate if variance_type_to_use=="individual",
+        # "distribution" cannot be None.
+        if self.variance_type_to_use == "individual" and self.distribution is None:
+            raise ValueError(
+                "variance_type_to_use=='individual' \
+                             requires that 'distribution' not be None.\
+                             However, that value was passed."
+            )
+
+        # Validate the distribution and stat generation functions to make
+        # sure that they run correctly. Pass a 3D numpy normal array to them and
+        # make sure that they spit the right output.
+        self.__validate_distribution(self.distribution, self.distribution_kwargs)
+        self.__validate_stat_generating_function(
+            self.stat_generating_function, self.stat_generating_function_kwargs
+        )
 
         # Get the oob_pred and n_oob_pred arrays.
         train_ind_pred, train_ind_n_pred = self._generate_oob_array(
@@ -110,11 +146,10 @@ class EnsembleModelInference:
 
         # Compute means.
         train_means = np.nanmean(train_ind_pred, axis=1, keepdims=True)
-        train_medians = np.nanmedian(train_ind_pred, axis=1, keepdims=True)
 
-        # TODO: If there are any nans in train_means, raise warning.
+        # If there are any nan values in train means, we raise a warning.
         if np.isnan(train_means).sum() > 0:
-            warnings.warn(
+            warn(
                 "Out-of-bag (OOB) estimate has been attempted but at least one sample \
                           hasn't been out-of-bag even once. This might lead to errors. \
                           Please reduce the 'max_samples' parameter in estimator or \
@@ -130,7 +165,7 @@ class EnsembleModelInference:
                 self.marginal_dist = marginal_dist
 
             elif self.variance_type_to_use == "individual":
-                y_train_rep = np.tile(self.y_train, (1, self.n_estimators, 1))
+                y_train_rep = np.tile(self.y_train, (1, self.estimator.n_estimators, 1))
                 # Compute MSE by tree. (1, n_estimators, n_outputs)
                 MSE = np.nanmean(
                     (train_ind_pred - y_train_rep) ** 2, axis=0, keepdims=True
@@ -138,6 +173,163 @@ class EnsembleModelInference:
                 std = np.sqrt(MSE)
 
             self.sigma = std
+
+    def __validate_and_transform_X(self, X, copy_X):
+        """Setting the right type of X."""
+
+        if copy_X:
+            X = deepcopy(X)
+
+        if type(X) == pd.core.frame.DataFrame:
+            X = X.values
+
+        # If in case, ndim of X is 1, we reshape it.
+        if X.ndim == 1:
+            X = X.reshape((-1, 1))
+
+        # Prediction requires X to be in CSR format
+        if issparse(X):
+            X = X.tocsr()
+
+        assert X.ndim == 2, DataDimensionalityWarning(
+            "X could not be converted to a 2D array"
+        )
+
+        return X
+
+    def __validate_y_and_transform_y(self, y, X, copy_y):
+        """ """
+
+        if copy_y:
+            y = deepcopy(y)
+
+        if y.ndim == 1:
+            y = y.reshape((-1, 1, 1))
+        elif y.ndim == 2:
+            y = y.reshape((y.shape[0], 1, y.shape[1]))
+        else:
+            raise ValueError("y is not of dimension 1 or 2 as required.")
+
+        assert y.shape[0] == X.shape[0], "Shape of y different from corresponding X."
+
+        return y
+
+    def _confirm_estimator_is_from_ensemble(self, estimator):
+
+        # Checks that the estimator is an ensemble model.
+        module = getattr(estimator, "__module__")
+        if module != "sklearn.ensemble._forest":
+            raise TypeError(
+                "Supplied estimator is not of type\
+                            sklearn.ensemble._forest.\
+                            Please ensure that it is of the right type."
+            )
+
+    def _stat_generator(self, significance_levels, **kwargs):
+        """Stat generating function: Returns a list of stats given a list of
+        significance levels."""
+
+        stats = []
+        for level in significance_levels:
+            if level is None:
+                stats.append(None)
+            else:
+                stat = np.quantile(self.distribution(size=int(1e6), **kwargs), level)
+                stats.append(stat)
+
+        return stats
+
+    def _validate_sigma(self, sigma):
+        # Validate sigma
+        if sigma is not None:
+            if type(sigma) == float:
+                pass
+            elif type(sigma) == np.ndarray:
+                assert sigma.shape == (
+                    self.estimator.n_estimators,
+                ), f"Shape of sigma provided = {sigma.shape} does not equal the \
+                        required shape of ({self.estimator.n_estimators},)."
+
+    def _validate_and_assign_distribution_attributes(
+        self,
+        distribution,
+        distribution_kwargs,
+        stat_generating_function,
+        stat_generating_function_kwargs,
+    ):
+        # If distribution is known, assign the correct parameters.
+        if type(distribution) == str and distribution == "normal":
+            self.distribution = np.random.normal
+            self.distribution_kwargs = {}
+            self.stat_generating_function = get_z_values
+            self.stat_generating_function_kwargs = {}
+        elif callable(distribution):
+            self.distribution = distribution
+            self.distribution_kwargs = distribution_kwargs
+            if stat_generating_function is None:
+                self.stat_generating_function = self._stat_generator
+                self.stat_generating_function_kwargs = distribution_kwargs
+            else:
+                self.stat_generating_function = stat_generating_function
+                self.stat_generating_function_kwargs = stat_generating_function_kwargs
+        elif distribution is None:
+            self.distribution = distribution
+            self.distribution_kwargs = distribution_kwargs
+
+            # In this case, stat_generating function must be None.
+            # Else, raise error.
+            assert (
+                stat_generating_function is None
+            ), "If distribution is None,\
+                stat generating function must alse be None."
+
+            self.stat_generating_function = stat_generating_function
+            self.stat_generating_function_kwargs = stat_generating_function_kwargs
+        else:
+            raise ValueError(
+                "'distribution' must either be None, \
+                             function or 'normal', but some other value was passed."
+            )
+
+    def __validate_distribution(self, distribution, distribution_kwargs):
+        """ """
+        # Pass 3D array to scale parameter and make sure that it works.
+        try:
+            shape = (3, 4, 5)
+            dist = distribution(
+                size=shape, scale=np.random.random(size=shape), **distribution_kwargs
+            )
+            assert (
+                dist.shape == shape
+            ), "Distribution test failed. \
+                Does not return the desired shape."
+        except Exception:
+            raise ValueError(
+                "'distribution' validation failed. Please \
+                             ensure that the size and scale parameter can take \
+                             in 3D arrays like the numpy.random.normal function."
+            )
+
+    def __validate_stat_generating_function(
+        self, stat_generating_function, stat_generating_function_kwargs
+    ):
+        """ """
+        # Pass list to stat generating function and make sure that we get
+        # a list of the same length.
+        try:
+            levels = [0.05, 0.95]
+            stats = stat_generating_function(levels, **stat_generating_function_kwargs)
+
+            assert len(stats) == len(
+                levels
+            ), "Stat generating function test failed.\
+                Did not return the desired size."
+
+        except Exception:
+            raise ValueError(
+                "Please ensure that the size and scale parameter can take\
+                             in 3D arrays like the numpy.random.normal function."
+            )
 
     def get_intervals(
         self,
@@ -213,35 +405,67 @@ class EnsembleModelInference:
             / confidence intervals.
         """
 
-        # TODO: Validate the inputs. specifically, if estimate_from_SD is
-        # True, and distribution is None, not validated to be in the right format:
-        # raise error.
-
+        # Validate values.
         X = self.__validate_and_transform_X(X, copy_X)
+
+        validate_bool(is_train_data, term_name="is_train_data")
+        validate_str(
+            type_, term_name="type_", allowed_vals=["prediction", "confidence"]
+        )
+        validate_bool(estimate_from_SD, term_name="estimate_from_SD")
+        validate_float(confidence_level, term_name="confidence_level")
+        validate_str(
+            side, term_name="side", allowed_vals=["two-sided", "lower", "upper"]
+        )
+        validate_bool(lsa_assumption, term_name="lsa_assumption")
+        validate_bool(return_full_distribution, term_name="return_full_distribution")
+        validate_bool(copy_X, term_name="copy_X")
 
         estimator = self.estimator
 
-        self._confirm_estimator_is_from_ensemble(estimator)
-
         if is_classifier(estimator) and hasattr(estimator, "n_classes_"):
             raise ValueError(
-                "Prediction intervals only defined for regressor models \
-                while the model passed is a classifier"
+                "Prediction intervals can only be computed for regressor models. \
+                The model passed is a classifier."
             )
 
         # Validate others
+        if (
+            type_ == "confidence"
+            and estimate_from_SD
+            and not lsa_assumption
+            and self.stat_generating_function is None
+        ):
+            raise ValueError(
+                "For confidence intervals to be estimated using \
+                             standard deviation, if LSA assumption does not hold,\
+                             an appropriate 'stat generating function' must be\
+                            supplied."
+            )
+
+        if (
+            type_ == "prediction"
+            and estimate_from_SD
+            and self.stat_generating_function is None
+        ):
+            raise ValueError(
+                "For prediction intervals to be computed \
+                             standard deviation estimates, an appropriate \
+                             'stat_generating_function' is necessary.\
+                             Please provide this using 'set_up_model_inference' \
+                             or set 'estimate_from_SD' to False."
+            )
 
         # Get the oob_pred and n_oob_pred arrays.
         oob_pred, n_oob_pred = self._generate_oob_array(
             X, estimator, is_train_data=is_train_data
         )
 
-        # Take the mean and std along the estimators axis. Shape of these arrays
+        # Take the mean, median and std along the estimators axis.
+        # Shape of these arrays
         # should be (n_samples x n_features)
         means_array = np.nanmean(oob_pred, axis=1, keepdims=True)
         median_array = np.nanmedian(oob_pred, axis=1, keepdims=True)
-
-        # Computes confidence standard deviation.
         std_array = np.nanstd(
             oob_pred, axis=1, ddof=1, keepdims=True
         )  # Sample std. dev.
@@ -250,7 +474,6 @@ class EnsembleModelInference:
         significance_levels = get_significance_levels(confidence_level, side)
 
         n_samples = X.shape[0]
-        n_estimators = estimator.n_estimators
         n_outputs = estimator.n_outputs_
 
         if type_ == "confidence":
@@ -280,16 +503,6 @@ class EnsembleModelInference:
                     n_outputs,
                 )
         elif type_ == "prediction":
-            # For the non-parametric case: we will use the fit$MSE equivalent
-            # values to create a distribution by pulling separately from each tree.
-            # For parametric, we will simply use the pooled variance
-            # by using sum of values from different distributions :
-            # var(sum) = var1 + var2 + ...
-            # and then take the mean to get the SE for the prediction interval.
-            # TODO: Check if the MSE thing is a better estimate of the prediction
-            # interval or var pred int + sigma^2. (seems like these are equivalent)
-
-            # Get the interval array for parametric and normal distribution.
             if self.variance_type_to_use == "marginal":
                 if not estimate_from_SD:
                     # If marginal, simply use the distribution.
@@ -313,7 +526,6 @@ class EnsembleModelInference:
                     upper_bound = means_array + q2_rep
 
                     interval_array = np.concatenate((lower_bound, upper_bound), axis=1)
-
                 else:
                     std_array = np.tile(self.sigma, (n_samples, 1, 1))
 
@@ -362,120 +574,16 @@ class EnsembleModelInference:
                         n_outputs,
                     )
 
-        # Output list of dictionaries.
-        pred_int_list = []
-        for output_ind in range(n_outputs):
-            # Dictionary of the outputs which we will ultimately tranform
-            # into a dataframe.
-            pred_int_dict = {}
-            pred_int_dict["mean"] = means_array[:, 0, output_ind]
-            pred_int_dict["std"] = std_array[:, 0, output_ind]
-            pred_int_dict["median"] = median_array[:, 0, output_ind]
-            pred_int_dict["lower_bound"] = interval_array[:, 0, output_ind]
-            pred_int_dict["upper_bound"] = interval_array[:, 1, output_ind]
-
-            # Convert into dataframe
-            pred_int_df = pd.DataFrame.from_dict(pred_int_dict)
-            pred_int_list.append(pred_int_df)
-
-        # Return the required things.
-        if return_full_distribution:
-            return pred_int_list, oob_pred, n_oob_pred, means_array, std_array
-        else:
-            return pred_int_list
-
-    def __validate_and_transform_X(self, X, copy_X):
-        """Setting the right type of X."""
-
-        if copy_X:
-            X = deepcopy(X)
-
-        if type(X) == pd.core.frame.DataFrame:
-            X = X.values
-
-        # If in case, ndim of X is 1, we reshape it.
-        if X.ndim == 1:
-            X = X.reshape((-1, 1))
-
-        # Prediction requires X to be in CSR format
-        if issparse(X):
-            X = X.tocsr()
-
-        assert X.ndim == 2, DataDimensionalityWarning(
-            "X could not be converted to a 2D array"
+        return self._return_dfs(
+            n_outputs,
+            means_array,
+            std_array,
+            median_array,
+            interval_array,
+            return_full_distribution,
+            oob_pred,
+            n_oob_pred,
         )
-
-        return X
-
-    def __validate_y_and_transform_y(self, y, X, copy_y):
-        """ """
-
-        if copy_y:
-            y = deepcopy(y)
-
-        if y.ndim == 1:
-            y = y.reshape((-1, 1, 1))
-        elif y.ndim == 2:
-            y = y.reshape((y.shape[0], 1, y.shape[1]))
-        else:
-            raise ValueError("y is not of dimension 1 or 2 as required.")
-
-        assert y.shape[0] == X.shape[0], "Shape of y different from corresponding X."
-
-        return y
-
-    def _confirm_estimator_is_from_ensemble(self, estimator):
-
-        # Checks that the estimator is an ensemble model.
-        module = getattr(estimator, "__module__")
-        if module != "sklearn.ensemble._forest":
-            raise TypeError(
-                "Supplied estimator is not of type\
-                            sklearn.ensemble._forest.\
-                            Please ensure that it is of the right type."
-            )
-
-    def _stat_generator(self, significance_levels, kwargs):
-        """Stat generating function: Returns a list of stats given a list of
-        significance levels."""
-
-        stats = []
-        for level in significance_levels:
-            if level is None:
-                stats.append(None)
-            else:
-                stat = np.quantile(self.distribution(size=1e6, **kwargs), level)
-                stats.append(stat)
-
-        return stats
-
-    def _generate_feature_importance_array(self, estimator):
-        """Computes feature importance array."""
-
-        n_features = estimator.feature_importances_.shape[0]
-        n_estimators = estimator.n_estimators
-        n_outputs = estimator.n_outputs_
-
-        # For each tree, store the feature importances.
-        feature_imp_shape = (n_features, n_estimators, n_outputs)
-
-        feature_imp_array = np.tile(np.float64(np.nan), feature_imp_shape)
-        n_feature_imp_array = np.zeros((n_features, 1, n_outputs), dtype=int)
-
-        # Compute the array for each tree.
-        for estimator_ind, estimator in enumerate(estimator.estimators_):
-            # Should yield output dimensions of n_features x n_outputs
-            tree_imp = estimator.feature_importances_
-
-            # If y_pred is an array, reshape into a matrix. This can happend for
-            # n_output = 1
-            if tree_imp.ndim == 1:
-                tree_imp = tree_imp.reshape((-1, 1))
-
-            feature_imp_array[:, estimator_ind, :] = tree_imp
-            n_feature_imp_array[:, 0, :] += 1
-
-        return feature_imp_array, n_feature_imp_array
 
     def _generate_oob_array(self, X, estimator, is_train_data):
         """
@@ -620,16 +728,39 @@ class EnsembleModelInference:
             interval_array = np.concatenate((neg_inf_array, finite_val_array), axis=1)
         return interval_array
 
-        # else:  # No LSA assumption
-        #     raise NotImplementedError(
-        #         "You have chosen to compute \
-        #             prediction intervals assuming a non-normal \
-        #             parametric model. Prediction intervals for \
-        #             such models haven't been implemented. \
-        #             Please get the means_array and std_arrays using \
-        #             the 'return_all_data' argument and compute the \
-        #             intervals by yourself."
-        #     )
+    def _return_dfs(
+        self,
+        n_outputs,
+        means_array,
+        std_array,
+        median_array,
+        interval_array,
+        return_full_distribution,
+        oob_pred=None,
+        n_oob_pred=None,
+    ):
+        """Returns results for feture importance as well as prediction intervals."""
+        # Output list of dictionaries.
+        pred_int_list = []
+        for output_ind in range(n_outputs):
+            # Dictionary of the outputs which we will ultimately tranform
+            # into a dataframe.
+            pred_int_dict = {}
+            pred_int_dict["mean"] = means_array[:, 0, output_ind]
+            pred_int_dict["std"] = std_array[:, 0, output_ind]
+            pred_int_dict["median"] = median_array[:, 0, output_ind]
+            pred_int_dict["lower_bound"] = interval_array[:, 0, output_ind]
+            pred_int_dict["upper_bound"] = interval_array[:, 1, output_ind]
+
+            # Convert into dataframe
+            pred_int_df = pd.DataFrame.from_dict(pred_int_dict)
+            pred_int_list.append(pred_int_df)
+
+        # Return the required things.
+        if return_full_distribution:
+            return pred_int_list, oob_pred, n_oob_pred, means_array, std_array
+        else:
+            return pred_int_list
 
     def get_feature_importance_intervals(
         self,
@@ -690,17 +821,14 @@ class EnsembleModelInference:
             feature_imp_array provides predictions by each tree for each sample at each variable.
             n_feature_imp_array tracks the number of non-nan values predicted by each estimator at
             each output.
-
-        NOTES:
-        ------
-        1. For multi-output y, RandomForestRegresso outputs identical feature importances
-         for each target variable. This results in us outputting identical
-         feature importances for each output. This might not be right.
-        It is better to fit a separate random forest for each target
-        and obtain feature importances accordingly.
         """
 
         # Validates inputs.
+        validate_float(confidence_level, term_name="confidence_level")
+        validate_str(
+            side, term_name="side", allowed_vals=["two-sided", "lower", "upper"]
+        )
+        validate_bool(return_full_distribution, term_name="return_full_distribution")
 
         estimator = self.estimator
 
@@ -732,31 +860,68 @@ class EnsembleModelInference:
             side, significance_levels, n_features, n_outputs, feature_imp_array
         )
 
-        # Output list of dictionaries.
-        feature_imp_int_list = []
-        for output_ind in range(n_outputs):
-            # Dictionary of the outputs which we will ultimately tranform
-            # into a dataframe.
-            feature_imp_int_dict = {}
-            feature_imp_int_dict["mean"] = means_array[:, 0, output_ind]
-            feature_imp_int_dict["std"] = std_array[:, 0, output_ind]
-            feature_imp_int_dict["median"] = median_array[:, 0, output_ind]
-            feature_imp_int_dict["lower_bound"] = interval_array[:, 0, output_ind]
-            feature_imp_int_dict["upper_bound"] = interval_array[:, 1, output_ind]
+        return self._return_dfs(
+            n_outputs,
+            means_array,
+            std_array,
+            median_array,
+            interval_array,
+            return_full_distribution,
+        )
 
-            # Convert into dataframe
-            feature_imp_int_df = pd.DataFrame.from_dict(feature_imp_int_dict)
+        # # Output list of dictionaries.
+        # feature_imp_int_list = []
+        # for output_ind in range(n_outputs):
+        #     # Dictionary of the outputs which we will ultimately tranform
+        #     # into a dataframe.
+        #     feature_imp_int_dict = {}
+        #     feature_imp_int_dict["mean"] = means_array[:, 0, output_ind]
+        #     feature_imp_int_dict["std"] = std_array[:, 0, output_ind]
+        #     feature_imp_int_dict["median"] = median_array[:, 0, output_ind]
+        #     feature_imp_int_dict["lower_bound"] = interval_array[:, 0, output_ind]
+        #     feature_imp_int_dict["upper_bound"] = interval_array[:, 1, output_ind]
 
-            feature_imp_int_list.append(feature_imp_int_df)
+        #     # Convert into dataframe
+        #     feature_imp_int_df = pd.DataFrame.from_dict(feature_imp_int_dict)
 
-        # Return the required things.
-        if return_full_distribution:
-            return (
-                feature_imp_int_list,
-                feature_imp_array,
-                n_feature_imp_array,
-                means_array,
-                std_array,
-            )
-        else:
-            return feature_imp_int_list
+        #     feature_imp_int_list.append(feature_imp_int_df)
+
+        # # Return the required things.
+        # if return_full_distribution:
+        #     return (
+        #         feature_imp_int_list,
+        #         feature_imp_array,
+        #         n_feature_imp_array,
+        #         means_array,
+        #         std_array,
+        #     )
+        # else:
+        #     return feature_imp_int_list
+
+    def _generate_feature_importance_array(self, estimator):
+        """Computes feature importance array."""
+
+        n_features = estimator.feature_importances_.shape[0]
+        n_estimators = estimator.n_estimators
+        n_outputs = estimator.n_outputs_
+
+        # For each tree, store the feature importances.
+        feature_imp_shape = (n_features, n_estimators, n_outputs)
+
+        feature_imp_array = np.tile(np.float64(np.nan), feature_imp_shape)
+        n_feature_imp_array = np.zeros((n_features, 1, n_outputs), dtype=int)
+
+        # Compute the array for each tree.
+        for estimator_ind, estimator in enumerate(estimator.estimators_):
+            # Should yield output dimensions of n_features x n_outputs
+            tree_imp = estimator.feature_importances_
+
+            # If y_pred is an array, reshape into a matrix. This can happend for
+            # n_output = 1
+            if tree_imp.ndim == 1:
+                tree_imp = tree_imp.reshape((-1, 1))
+
+            feature_imp_array[:, estimator_ind, :] = tree_imp
+            n_feature_imp_array[:, 0, :] += 1
+
+        return feature_imp_array, n_feature_imp_array

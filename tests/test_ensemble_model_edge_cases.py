@@ -216,7 +216,7 @@ def test_non_normal_error_distribution_marginal(set_up_non_normal_dist):
     inf = EnsembleModelInference()
 
     def poisson(scale=1, size=None):
-        """Wrapper around numpy's Poisson function to specify scale.
+        r"""Wrapper around numpy's Poisson function to specify scale.
         Note: For poisson, the mean, and variance are both=$\lambda$.
         So, we adjust for the mean, and "scale", i.e., standard deviation.
         """
@@ -259,7 +259,7 @@ def test_non_normal_error_distribution_ind(set_up_non_normal_dist):
     inf = EnsembleModelInference()
 
     def poisson(scale=1, size=None):
-        """Wrapper around numpy's Poisson function to specify scale.
+        r"""Wrapper around numpy's Poisson function to specify scale.
         Note: For poisson, the mean, and variance are both=$\lambda$.
         So, we adjust for the mean, and "scale", i.e., standard deviation.
         """

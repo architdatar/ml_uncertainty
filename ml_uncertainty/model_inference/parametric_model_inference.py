@@ -1,8 +1,5 @@
 """Parametric model inference class"""
 
-# TODO: Benchmark custom regularization.
-# TODO: Benchmark degrees of freedom for model with intercept w.r.t statsmodels.
-
 import autograd.numpy as np
 from autograd import jacobian
 from autograd import elementwise_grad as egrad
