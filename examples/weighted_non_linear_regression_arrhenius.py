@@ -2,12 +2,12 @@ r"""Non-linear regression with varying uncertainties in samples.
 
 Let's consider the familiar example of the Arrhenius model again.
 
-NEW CASE: 
+NEW CASE:
 ---------
-Say, for instance, we know that, at T > 550 C, the uncertainty 
+Say, for instance, we know that, at T > 550 C, the uncertainty
  in the rate constants doubles.
 
-How can we adequately model this data? For the linear case, there is 
+How can we adequately model this data? For the linear case, there is
 weighted linear regression, but for the non-linear case, we can use
 the weighted non-linear regression as illustrated below.
 """
@@ -24,7 +24,12 @@ import pandas as pd
 # Let's say we wish to fit an Arrhenius model to it.
 # Let's say we use the data provided in the link below to study
 # the rate of reaction for conversion of cyclopropane to propene.
-# https://chem.libretexts.org/Bookshelves/Physical_and_Theoretical_Chemistry_Textbook_Maps/Supplemental_Modules_(Physical_and_Theoretical_Chemistry)/Kinetics/06%3A_Modeling_Reaction_Kinetics/6.02%3A_Temperature_Dependence_of_Reaction_Rates/6.2.03%3A_The_Arrhenius_Law/6.2.3.01%3A_Arrhenius_Equation
+# Source: https://chem.libretexts.org/Bookshelves/
+# Physical_and_Theoretical_Chemistry_Textbook_Maps/
+# Supplemental_Modules_(Physical_and_Theoretical_Chemistry)/
+# Kinetics/06%3A_Modeling_Reaction_Kinetics/
+# 6.02%3A_Temperature_Dependence_of_Reaction_Rates/6.2.03%3A_The_Arrhenius_Law/
+# 6.2.3.01%3A_Arrhenius_Equation
 
 
 def arrhenius_model(T, coefs_):
@@ -32,7 +37,7 @@ def arrhenius_model(T, coefs_):
 
     $$ k = Ae^{-Ea/RT}$$
 
-    Source: https://chem.libretexts.org/Bookshelves/Physical_and_Theoretical_Chemistry_Textbook_Maps/Supplemental_Modules_(Physical_and_Theoretical_Chemistry)/Kinetics/06%3A_Modeling_Reaction_Kinetics/6.02%3A_Temperature_Dependence_of_Reaction_Rates/6.2.03%3A_The_Arrhenius_Law/6.2.3.01%3A_Arrhenius_Equation
+    Source: See source above
 
     Parameters:
     -----------
@@ -106,7 +111,7 @@ df_param["nlr_std"] = df_feature_imp["std"].values
 df_param["lower_bound_90%_conf"] = df_feature_imp["lower_bound"].values
 df_param["upper_bound_90%_conf"] = df_feature_imp["upper_bound"].values
 
-display(df_param)
+print(df_param)
 
 # Plot the prediction intervals.
 plt.figure()
@@ -196,7 +201,7 @@ df_param["nlr_std"] = df_feature_imp["std"].values
 df_param["lower_bound_90%_conf"] = df_feature_imp["lower_bound"].values
 df_param["upper_bound_90%_conf"] = df_feature_imp["upper_bound"].values
 
-display(df_param)
+print(df_param)
 
 
 # Plot the prediction intervals.
@@ -235,13 +240,13 @@ plt.legend(loc="lower right")
 
 """
 Conclusions:
-1. Notice that the fit has improved to become close to the 
+1. Notice that the fit has improved to become close to the
 higher weighted, i.e., lower uncertainty points.
-2. Notice that with the weighted non-linear approach, we 
+2. Notice that with the weighted non-linear approach, we
 are able to reproduce the uncertainties accurately and predict
 higher uncertainties for points where we would expect there to be
 higher uncertainties.
-   
+
 """
 
 

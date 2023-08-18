@@ -1,3 +1,8 @@
+"""Example to show how to use to the EnsembleModelInference to compute
+1. Feature importance intervals
+2. Prediction intervals
+"""
+
 #%%
 import numpy as np
 from sklearn.datasets import make_regression
@@ -17,7 +22,7 @@ np.random.seed(1)
 X_og, y_og = make_regression(
     n_samples=100,
     n_features=5,
-    n_informative=0,
+    n_informative=2,
     noise=10,
     random_state=10,
 )
@@ -44,24 +49,16 @@ y_pred_test = regr.predict(X_test)
 # Run ensemble model inference
 inf = EnsembleModelInference()
 
+inf.set_up_model_inference(X, y, regr)
+
 # Get feature importances and their uncertainties for the first variable.
 df_imp = inf.get_feature_importance_intervals(
-    regr,
-    return_full_distribution=False,
     confidence_level=90.0,
 )[0]
 
 # Feature importance plots. Make plots.
-# Normal plot
-sns.barplot(
-    x=df_imp["mean"],
-    y=df_imp.index.astype("category"),
-    color="gray",
-    capsize=10,
-)
-
-# With errors
 plt.figure()
+plt.title("Feature importance with spreads")
 sns.barplot(
     x=df_imp["mean"],
     y=df_imp.index.astype("category"),
@@ -75,9 +72,10 @@ sns.barplot(
 
 #%%
 # Compute prediction intervals for the first target variable.
+# NOTE: For confidence intervals, simply add type="confidence" as an argument
+# to the get_intervals function.
 df_int = inf.get_intervals(
     X,
-    regr,
     is_train_data=True,
     confidence_level=90.0,
 )[0]
@@ -85,7 +83,6 @@ df_int = inf.get_intervals(
 # Test set: Compute prediction intervals for the first target variable.
 df_int_test = inf.get_intervals(
     X_test,
-    regr,
     is_train_data=False,
     confidence_level=90.0,
 )[0]
@@ -93,14 +90,6 @@ df_int_test = inf.get_intervals(
 print(f"R2 = {r2_score(y, y_pred)}")
 print(f"R2 test = {r2_score(y_test, y_pred_test)}")
 
-# Normal: Y prediction versus actual.
-plt.figure()
-plt.errorbar(y, y_pred, marker="o", markersize=8, ls="none", zorder=0)
-
-# Test set: errorbars
-plt.errorbar(
-    y_test, y_pred_test, marker="x", markersize=8, ls="none", zorder=0, color="red"
-)
 
 # With predicted error values.
 plt.figure()

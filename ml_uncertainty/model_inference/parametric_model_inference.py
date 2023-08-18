@@ -29,17 +29,16 @@ class ParametricModelInference:
 
     Examples:
     ---------
-    See
-        examples/non_linear_regression_quadratic.py
-        examples/non_linear_regression_arrhenius.py
-        examples/parametric_model.py
+    examples/non_linear_regression_quadratic.py
+    examples/non_linear_regression_arrhenius.py
+    examples/parametric_model.py
 
     References:
     -----------
     1. The functions get_J, get_H are adopted from
         https://github.com/sriki18/adnls/blob/master/adnls.py#L92.
     2. The formulae are taken from Niclas Borlin's lecture slides.
-    https://www8.cs.umu.se/kurser/5DA001/HT07/lectures/lsq-handouts.pdf
+        https://www8.cs.umu.se/kurser/5DA001/HT07/lectures/lsq-handouts.pdf
     """
 
     def __init__(self):

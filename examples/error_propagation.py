@@ -10,7 +10,12 @@ def arrhenius_model(T, coefs_):
 
     $$ k = Ae^{-Ea/RT}$$
 
-    Source: https://chem.libretexts.org/Bookshelves/Physical_and_Theoretical_Chemistry_Textbook_Maps/Supplemental_Modules_(Physical_and_Theoretical_Chemistry)/Kinetics/06%3A_Modeling_Reaction_Kinetics/6.02%3A_Temperature_Dependence_of_Reaction_Rates/6.2.03%3A_The_Arrhenius_Law/6.2.3.01%3A_Arrhenius_Equation
+    Source: https://chem.libretexts.org/Bookshelves/
+    Physical_and_Theoretical_Chemistry_Textbook_Maps/
+    Supplemental_Modules_(Physical_and_Theoretical_Chemistry)/
+    Kinetics/06%3A_Modeling_Reaction_Kinetics/
+    6.02%3A_Temperature_Dependence_of_Reaction_Rates/
+    6.2.03%3A_The_Arrhenius_Law/6.2.3.01%3A_Arrhenius_Equation
 
     Parameters:
     -----------

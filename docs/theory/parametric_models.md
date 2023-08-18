@@ -17,9 +17,13 @@ we get p degrees of freedom.
 
 Total degrees of freedom: N-1
 Residual degrees of freedom  = (N - 1) - model dof
+
 ## Estimating $\sigma^2$
 
+Residual sum of squares / Error degrees of freedom
+
 ## Calculation of the variance-covariance matrix
-    https://www8.cs.umu.se/kurser/5DA001/HT07/lectures/lsq-handouts.pdf
+
+https://www8.cs.umu.se/kurser/5DA001/HT07/lectures/lsq-handouts.pdf
 
 ## Estimating confidence and prediction intervals.

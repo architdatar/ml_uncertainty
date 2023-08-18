@@ -1,8 +1,8 @@
 """
-To get Hessian matrix of loss function, we need to take its derivative. 
-Somehow, Autograd does not take the derivative of the numpy L1 norm. 
+To get Hessian matrix of loss function, we need to take its derivative.
+Somehow, Autograd does not take the derivative of the numpy L1 norm.
 This is likely because it is a modulus function the derivative of which
-is not defined at x=0. 
+is not defined at x=0.
 
 So, to estimate this, we have instead used the L2 norm and its derivatives.
 In this example, we see whether that assumption is justified.
@@ -11,9 +11,7 @@ In this example, we see whether that assumption is justified.
 # import numpy as np
 import autograd.numpy as np
 import matplotlib.pyplot as plt
-from autograd import jacobian
 from autograd import hessian
-import matplotlib.pyplot as plt
 
 
 def l1_norm(params):
@@ -56,7 +54,7 @@ Conclusions:
 1. For all arrays, the first derivative of the L1 and L2 norms
     differ significantly, but the second derivatives are very close
     to each other.
-2. Thus, if the objective is to compute the Hessian matrix, the 
+2. Thus, if the objective is to compute the Hessian matrix, the
     errors with either of these approaches are exceedingly small.
 """
 # %%

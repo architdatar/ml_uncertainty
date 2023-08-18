@@ -3,8 +3,6 @@
 
 
 import pytest
-import pandas as pd
-from io import StringIO
 import numpy as np
 from ml_uncertainty.model_inference import EnsembleModelInference
 from sklearn.ensemble import RandomForestRegressor
@@ -171,7 +169,6 @@ def test_prediction_interval_individual(set_up_random_forest):
         confidence_level=90.0,
         return_full_distribution=False,
     )
-
     df_int_1 = df_int_list_1[0]
     coverage_1 = compute_coverage(df_int_1, y_train)
 
@@ -197,5 +194,67 @@ def test_prediction_interval_individual(set_up_random_forest):
 
     assert (
         np.abs(coverage_2 - 0.95) < 0.02
+    ), "Coverage for individual with SD\
+            deviates from expected value."
+
+
+def test_confidence_intervals(set_up_random_forest):
+    """Computes confidence intervals."""
+
+    (
+        X,
+        y,
+        X_train,
+        y_train,
+        X_test,
+        y_test,
+        true_params,
+        noise,
+        y,
+        regr,
+        y_pred_train,
+        y_pred_test,
+    ) = set_up_random_forest
+
+    inf = EnsembleModelInference()
+
+    inf.set_up_model_inference(
+        X_train, y_train, regr, variance_type_to_use="individual"
+    )
+
+    # Gets prediction intervals NOT using SD.
+    df_int_list_1 = inf.get_intervals(
+        X_train,
+        is_train_data=True,
+        type_="confidence",
+        estimate_from_SD=False,
+        confidence_level=90.0,
+        return_full_distribution=False,
+    )
+    df_int_1 = df_int_list_1[0]
+    coverage_1 = compute_coverage(df_int_1, y_train)
+
+    # Test when prediction  intervals are from SD.
+    df_int_list_2 = inf.get_intervals(
+        X_train,
+        is_train_data=True,
+        type_="confidence",
+        estimate_from_SD=True,
+        confidence_level=90.0,
+        return_full_distribution=False,
+    )
+    df_int_2 = df_int_list_2[0]
+    coverage_2 = compute_coverage(df_int_2, y_train)
+
+    # Expected coverages
+
+    # Tests coverage against expected coverage
+    assert (
+        np.abs(coverage_1 - 0.47) < 0.02
+    ), "Coverage for individual with non-SD\
+            deviates from expected value."
+
+    assert (
+        np.abs(coverage_2 - 0.50) < 0.02
     ), "Coverage for individual with SD\
             deviates from expected value."

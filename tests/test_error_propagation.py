@@ -2,7 +2,6 @@
 
 """Tests for `error_propagation` package"""
 
-import autograd.numpy as np
 import pandas as pd
 from io import StringIO
 from ml_uncertainty.error_propagation.error_propagation import ErrorPropagation

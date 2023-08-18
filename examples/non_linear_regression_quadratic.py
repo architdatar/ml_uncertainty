@@ -1,7 +1,7 @@
 #%%
 r"""Illustrate non-linear regression for a simple quadratic model.
 This can be solved using linear regression as well by considering the
-squared term as a separate term, but we choose to consider it as a 
+squared term as a separate term, but we choose to consider it as a
 non-linear model to illustrate.
 """
 
@@ -64,7 +64,7 @@ df_param = pd.DataFrame()
 df_param["experimental"] = true_params
 df_param["nlr_fitted"] = nlr.coef_
 
-display(df_param)
+print(df_param)
 
 # Plot the results.
 plt.figure()
@@ -97,7 +97,7 @@ df_param["nlr_std"] = df_feature_imp["std"].values
 df_param["lower_bound_90%_conf"] = df_feature_imp["lower_bound"].values
 df_param["upper_bound_90%_conf"] = df_feature_imp["upper_bound"].values
 
-display(df_param)
+print(df_param)
 
 # Plot the prediction intervals.
 plt.figure()

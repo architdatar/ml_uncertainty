@@ -1,15 +1,13 @@
-"""Benchmarks the non-linear regression against the statsmodels. 
+"""Benchmarks the non-linear regression against statsmodels results.
 
-This test does not need to be run all the time and is only required
-to generate statsmodels values which will be compared with 
-non-linear regression for in the appropriate tests.
+This benchmark example creates files that is used in the `test_benchmark_sm_ols.py`
+test.
 """
 
 #%%
 # Import libraries.
 import statsmodels.api as sm
 import autograd.numpy as np
-from sklearn.datasets import make_regression
 from ml_uncertainty.non_linear_regression import NonLinearRegression
 from ml_uncertainty.model_inference import ParametricModelInference
 
@@ -91,11 +89,15 @@ assert (
 
 # Write out these arrays to a file.
 # 1D case
-# np.savetxt("sm_outputs/1D_best_fit_params.csv", sm_best_fit_params, fmt="%.10f", delimiter=",")
-# np.savetxt("sm_outputs/1D_param_errors.csv", param_std_error_sm, fmt="%.10f", delimiter=",")
+# np.savetxt("sm_outputs/1D_best_fit_params.csv", sm_best_fit_params, fmt="%.10f",
+#  delimiter=",")
+# np.savetxt("sm_outputs/1D_param_errors.csv", param_std_error_sm, fmt="%.10f",
+# delimiter=",")
 # np.savetxt("sm_outputs/1D_pred_bounds.csv", pred_sm_df, fmt="%.10f", delimiter=",")
 
 # 2D case
-# np.savetxt("sm_outputs/2D_best_fit_params.csv", sm_best_fit_params, fmt="%.10f", delimiter=",")
-# np.savetxt("sm_outputs/2D_param_errors.csv", param_std_error_sm, fmt="%.10f", delimiter=",")
+# np.savetxt("sm_outputs/2D_best_fit_params.csv", sm_best_fit_params, fmt="%.10f",
+# delimiter=",")
+# np.savetxt("sm_outputs/2D_param_errors.csv", param_std_error_sm, fmt="%.10f",
+# delimiter=",")
 # np.savetxt("sm_outputs/2D_pred_bounds.csv", pred_sm_df, fmt="%.10f", delimiter=",")

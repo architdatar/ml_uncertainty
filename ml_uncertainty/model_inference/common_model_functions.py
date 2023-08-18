@@ -20,7 +20,7 @@ def ordinary_residual(y_pred, y):
 
 
 def least_squares_loss(residuals, sample_weight=None):
-    """
+    r"""
     For ordinary least squares (sample weight is None):
     $$ \mathcal{L}(r, W) = 1/2 r^Tr $$
     For weight least squares (samle weight is not None):

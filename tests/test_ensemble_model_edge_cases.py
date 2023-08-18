@@ -1,5 +1,5 @@
 """Tests ensemble model for more complex cases:
-specifically 3 cases: 
+specifically 3 cases:
 1. Multioutput linear
 2. Single output non-linear
 3. Errors from non-linear distribution
@@ -183,7 +183,7 @@ def set_up_non_normal_dist():
     y_true = linear_model(X, true_params)
 
     # Poisson distribution.
-    noise = np.random.poisson(lam=1, size=X.shape[0])
+    noise = np.random.poisson(lam=1, size=X.shape[0]) - 1
 
     y = y_true + noise
 

@@ -1,9 +1,9 @@
 """Tests that the WLS function works well.
 
-Compares with the example from statsmodels. 
+Compares with the example from statsmodels.
 Source: https://www.statsmodels.org/dev/examples/notebooks/generated/wls.html
 
-Also see the benchmarking test in 
+Also see the benchmarking test in
 tests/benchmarking/sm_wls.py
 """
 

@@ -1,34 +1,13 @@
-"""Benchmarks the claims for ensemble models.
-
-Checks if this method indeed yields prediction and confidence intervals.
-
-Procedure: 
-1. Create X for train and tests for a given model. 
-2. For given X, get y from an underlying model with some variance.
-3. For this data, fit a random forest model and get y values and y prediction intervals.
-5. Look at distribution of y predicted and compare it with y expected.
-6. Repeat for different models.
+"""Benchmarks the various methods for ensemble models.
 """
 
 #%%
 import numpy as np
-from sklearn.datasets import make_regression
 from ml_uncertainty.model_inference import EnsembleModelInference
 from sklearn.ensemble import RandomForestRegressor
-import seaborn as sns
-import matplotlib.pyplot as plt
-from sklearn.metrics import r2_score
 
-np.random.seed(1)
 
-# X, _ = make_regression(
-#     n_samples=10000,
-#     n_features=1,
-#     n_informative=1,
-#     random_state=10,
-#     shuffle=True
-# )
-
+# Set up regression.
 X = (np.random.random(size=10000) * 10 + 5).reshape((-1, 1))
 
 int_for_split = int(0.8 * X.shape[0])
@@ -41,8 +20,8 @@ def model(X, coef_):
     return np.dot(X, coef_)
 
 
+# Training y
 true_params = np.array([1.0])
-
 noise = np.random.normal(loc=0, scale=1, size=X.shape[0])
 y = model(X, true_params) + noise
 
@@ -60,124 +39,90 @@ regr.fit(X_train, y_train)
 y_pred_train = regr.predict(X_train)
 y_pred_test = regr.predict(X_test)
 
-# Run ensemble model inference
-inf = EnsembleModelInference()
 
-# Get feature importances and their uncertainties for the first variable.
-df_imp = inf.get_feature_importance_intervals(
-    regr,
-    return_full_distribution=False,
-    confidence_level=90.0,
-)[0]
+# Set up function to compute coverage as necessary.
+def compute_coverage(df_int, y):
+    """Gets coverage from the dataframe."""
 
-# Compute prediction intervals for the first target variable.
-df_int_list_train = inf.get_intervals(
+    lower_bound = df_int["lower_bound"].values
+    upper_bound = df_int["upper_bound"].values
+
+    coverage = ((lower_bound < y) & (upper_bound > y)).sum() / y.shape[0]
+
+    return coverage
+
+
+# Marginal method.
+
+inf_mar = EnsembleModelInference()
+
+inf_mar.set_up_model_inference(X_train, y_train, regr, variance_type_to_use="marginal")
+
+# Gets prediction intervals NOT using SD.
+df_int_list_mar_1 = inf_mar.get_intervals(
     X_train,
-    regr,
     is_train_data=True,
+    type_="prediction",
+    estimate_from_SD=False,
     confidence_level=90.0,
     return_full_distribution=False,
 )
-df_int_train = df_int_list_train[0]
 
-df_int_list_test, oob_pred, n_oob_pred, means_array, std_array = inf.get_intervals(
-    X_test,
-    regr,
-    is_train_data=False,
+df_int_mar_1 = df_int_list_mar_1[0]
+coverage_mar_1 = compute_coverage(df_int_mar_1, y_train)
+
+# Test when prediction  intervals are from SD.
+df_int_list_mar_2 = inf_mar.get_intervals(
+    X_train,
+    is_train_data=True,
+    type_="prediction",
+    estimate_from_SD=True,
     confidence_level=90.0,
-    return_full_distribution=True,
+    return_full_distribution=False,
 )
-df_int_test = df_int_list_test[0]
+df_int_mar_2 = df_int_list_mar_2[0]
+coverage_mar_2 = compute_coverage(df_int_mar_2, y_train)
 
-#%%
-# Let's plot everything.
-plt.figure()
-sns.barplot(
-    x=df_imp["mean"],
-    y=df_imp.index.astype("category"),
-    xerr=(
-        df_imp["mean"] - df_imp["lower_bound"],
-        df_imp["upper_bound"] - df_imp["mean"],
-    ),
-    color="gray",
-    capsize=10,
+# Individual method.
+inf_ind = EnsembleModelInference()
+
+inf_ind.set_up_model_inference(
+    X_train, y_train, regr, variance_type_to_use="individual"
 )
 
-# Intervals
-print(f"R2 train= {r2_score(y_train, y_pred_train)}")
-print(f"R2 test = {r2_score(y_test, y_pred_test)}")
-
-# With predicted error values.
-plt.figure()
-plt.errorbar(
-    y_train,
-    y_pred_train,
-    yerr=(
-        df_int_train["mean"].values - df_int_train["lower_bound"].values,
-        df_int_train["upper_bound"].values - df_int_train["mean"].values,
-    ),
-    marker="o",
-    markersize=8,
-    ls="none",
-    zorder=0,
-    color="red",
-    label="Train",
+# Gets prediction intervals NOT using SD.
+df_int_list_ind_1 = inf_ind.get_intervals(
+    X_train,
+    is_train_data=True,
+    type_="prediction",
+    estimate_from_SD=False,
+    confidence_level=90.0,
+    return_full_distribution=False,
 )
+df_int_ind_1 = df_int_list_ind_1[0]
+coverage_ind_1 = compute_coverage(df_int_ind_1, y_train)
 
-# Test: With predicted error values.
-plt.errorbar(
-    y_test,
-    y_pred_test,
-    yerr=(
-        df_int_test["mean"].values - df_int_test["lower_bound"].values,
-        df_int_test["upper_bound"].values - df_int_test["mean"].values,
-    ),
-    marker="o",
-    markersize=8,
-    ls="none",
-    zorder=0,
-    color="blue",
-    label="Test",
+# Test when prediction  intervals are from SD.
+df_int_list_ind_2 = inf_ind.get_intervals(
+    X_train,
+    is_train_data=True,
+    type_="prediction",
+    estimate_from_SD=True,
+    confidence_level=90.0,
+    return_full_distribution=False,
 )
+df_int_ind_2 = df_int_list_ind_2[0]
+coverage_ind_2 = compute_coverage(df_int_ind_2, y_train)
 
-#%%
-# Let's pick the first 3 points from the test set and
-# see what their distribution looks like.
+# Print the values
+print(f"Coverage: Marginal + without SD = {coverage_mar_1}")
+print(f"Coverage: Marginal + with SD = {coverage_mar_2}")
+print(f"Coverage: Individual + without SD = {coverage_ind_1}")
+print(f"Coverage: Individual + with SD = {coverage_ind_2}")
 
-for point_ind in range(3):
-    X_point = X_test[[point_ind], :]
-    y_point = y_pred_test[point_ind]
-
-    plt.figure()
-    plt.title(f"Test point: {point_ind}")
-    plt.hist(noise, bins=10, color="green", zorder=0)
-    plt.hist(oob_pred[point_ind, :, 0] - y_point, color="red", zorder=0.1)
-
-    print(
-        f"Point {point_ind}: Prediction SE: {(oob_pred[point_ind, :, 0] - y_point).std()}"
-    )
-
-
-# It seems that the distribution we get here is the confidence interval
-# after all. So, we need to add the model $\sigma^2$ to it to get
-# the prediction interval.
-
-
-# Benchmarking: If we use the simple method shown in
-# https://github.com/haozhestat/rfinterval/blob/master/R/rfinterval.R
-# and in DOI: 10.1080/00031305.2019.1585288
-# we benchmark it by computing the coverage of the interval.
-# P(lower_bound < y < upper_bound) \approx (1-\alpha)
-# For the example considered here, it works.
-
-# D_true = y_pred_test - y_test
-# ((y_pred_test + np.quantile(D_true, 0.025) < y_test) & ((y_pred_test + np.quantile(D_true, 0.975) > y_test))).sum()
-
-# This also provides an impetus to show that the method of
-# getting y_hat - y for each tree, then getting its variance through
-# MSE and then adding those variances could work.
-# That way, we would be able to get the confidence intervals as well.
-# To test that it works, benchmark it this way.
-
-
+# Conclusions:
+# 1. The coverages for marginal method match the confidence level while
+# those obtained through the individual method overestimate them.
+# 2. The coverages hardly change much based on whether or not "estimate_with_SD" was
+# set to True or not.
 # %%

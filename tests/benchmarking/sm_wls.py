@@ -5,8 +5,6 @@ Source: https://www.statsmodels.org/dev/examples/notebooks/generated/wls.html
 #%%
 import numpy as np
 import statsmodels.api as sm
-from scipy import stats
-from statsmodels.iolib.table import SimpleTable, default_txt_fmt
 from ml_uncertainty.non_linear_regression import NonLinearRegression
 from ml_uncertainty.model_inference import ParametricModelInference
 
@@ -22,7 +20,7 @@ X = sm.add_constant(X)
 beta = [5.0, 0.5, -0.01]
 sig = 0.5
 w = np.ones(nsample)
-w[nsample * 6 // 10 :] = 3
+w[nsample * 6 // 10:] = 3
 y_true = np.dot(X, beta)
 e = np.random.normal(size=nsample)
 y = y_true + sig * w * e

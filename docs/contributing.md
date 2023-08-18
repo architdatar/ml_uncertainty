@@ -3,7 +3,7 @@ Topics
 
 ## Non-Linear Regression
 
-1. Add capabilities for regularization:Use scipy.optimize.minimize function to optimize and build the loss function as shown in ParametricModelInference.
+1. Add capabilities for regularization: Use scipy.optimize.minimize function to optimize and build the loss function as shown in ParametricModelInference.
 2. Enable non-explicit constrained optimization: Use scipy.optimize.minimize to optimize - Create loss function as in ParametricModelInference class.
 3. Accurate degree of freedom calculations for non-linear models: Currently, the model degrees of freedom are computed by considering the number of model parameters. But for true non-linear functions, these should be computed as shown in Hastie et al, [Elements of Statistical Learning](https://hastie.su.domains/ElemStatLearn/) Pg 233. 
 4. For L2 regularization for non-linear models, see Eq. 7.34 on Pg 233 of Hastie et al, [Elements of Statistical Learning](https://hastie.su.domains/ElemStatLearn/).  
@@ -21,6 +21,8 @@ Topics
 2. Allow users to compute Hessian through a first-order approximation for
     functions that might not be 2-times differenciable. Refer to Niclas Borgin's lectures.
     (J'J)
+3. Extend to classification models such as LogisticRegression, etc.
+
 
 ## Ensemble models
 1. Create tests for other kinds of models such as gradient boosting and classification models.
@@ -31,15 +33,17 @@ Topics
         Algorithm to do so is mentioned in Pg 122, algorithm 1
             1. Basic idea of the method is to create t perturbations in Y and measure the efects on $\hat{y}$. 
         Results can be compared with URL: https://arxiv.org/pdf/1911.00190.pdf Pg 11 and 12. 
-3. Extend this approach to other models such as XGBoost, Adaboost, etc.
-4. Create wrappers for more non-normal distributions as done in the [test](../tests/test_ensemble_model_edge_cases.py) for `test_non_normal_error_distribution_marginal`.
+
+4. Create wrappers for more non-normal distributions as done in the [example](../examples/random_forest_non-normal_distribution.py).
+5. Incorporate sample weights to compute prediction and confidence intervals.
+6. Investigate: Attempt to reproduce results from `fit$predicted` and `fit$mse` from `pred$individual` in the `randomForest` library in R. Hasn't been possible thus far.
+
 
 ## General
 1. Enable model signficance tests: 
     Analogous to F-tests for ordinary least squares regression. Implement F-tests for parametric models (with appropriate assumptions) and various distributions.
     
-    For non-parametric models 
 
 ## Documentation
 1. Write more documentation for internal methods.
-    
+2. More documentation for class attributes.

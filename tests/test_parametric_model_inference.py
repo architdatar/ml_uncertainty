@@ -2,9 +2,6 @@
 
 """Tests for `ensemble_model_inference` package"""
 
-# TODO: Write tests for custom models and LASSO and ridge
-# TODO: Write tests and create systems to deal with classification models.
-
 import pytest
 import numpy as np
 from ml_uncertainty.model_inference.parametric_model_inference import (

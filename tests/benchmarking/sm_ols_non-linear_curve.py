@@ -12,9 +12,6 @@ import autograd.numpy as np
 import statsmodels.api as sm
 from ml_uncertainty.non_linear_regression import NonLinearRegression
 from ml_uncertainty.model_inference import ParametricModelInference
-import matplotlib.pyplot as plt
-from ml_uncertainty.non_linear_regression import NonLinearRegression
-from ml_uncertainty.model_inference import ParametricModelInference
 
 np.random.seed(9876789)
 

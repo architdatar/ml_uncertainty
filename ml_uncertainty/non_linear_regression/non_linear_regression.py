@@ -1,6 +1,6 @@
 """
-Wrapper around scipy.optimize.least_squares to provide easy fitting utility for 
-non-linear functions. 
+Wrapper around scipy.optimize.least_squares to provide easy fitting utility for
+non-linear functions.
 """
 
 import numpy as np
@@ -75,9 +75,8 @@ class NonLinearRegression(RegressorMixin, BaseEstimator):
 
     Examples:
     --------
-    See
-        examples/non_linear_regression_quadratic.py
-        examples/non_linear_regression_arrhenius.py
+    examples/non_linear_regression_quadratic.py
+    examples/non_linear_regression_arrhenius.py
     """
 
     def __init__(

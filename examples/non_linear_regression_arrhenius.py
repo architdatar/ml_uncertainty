@@ -1,5 +1,5 @@
 #%%
-r"""In this example, we show how to use Non-Linear Regression which is 
+r"""In this example, we show how to use Non-Linear Regression which is
 scikit-learn-style way to easily fit non-linear models to data.
 It can handle any kind of models as such, but the most linear kinds of models
 are natively handled in sklearn.
@@ -20,7 +20,7 @@ import pandas as pd
 # Let's say we wish to fit an Arrhenius model to it.
 # Let's say we use the data provided in the link below to study
 # the rate of reaction for conversion of cyclopropane to propene.
-# https://chem.libretexts.org/Bookshelves/Physical_and_Theoretical_Chemistry_Textbook_Maps/Supplemental_Modules_(Physical_and_Theoretical_Chemistry)/Kinetics/06%3A_Modeling_Reaction_Kinetics/6.02%3A_Temperature_Dependence_of_Reaction_Rates/6.2.03%3A_The_Arrhenius_Law/6.2.3.01%3A_Arrhenius_Equation
+# Source: See in source for arrhenius model.
 
 
 def arrhenius_model(T, coefs_):
@@ -28,7 +28,12 @@ def arrhenius_model(T, coefs_):
 
     $$ k = Ae^{-Ea/RT}$$
 
-    Source: https://chem.libretexts.org/Bookshelves/Physical_and_Theoretical_Chemistry_Textbook_Maps/Supplemental_Modules_(Physical_and_Theoretical_Chemistry)/Kinetics/06%3A_Modeling_Reaction_Kinetics/6.02%3A_Temperature_Dependence_of_Reaction_Rates/6.2.03%3A_The_Arrhenius_Law/6.2.3.01%3A_Arrhenius_Equation
+    Source: https://chem.libretexts.org/Bookshelves/
+    Physical_and_Theoretical_Chemistry_Textbook_Maps/
+    Supplemental_Modules_(Physical_and_Theoretical_Chemistry)/
+    Kinetics/06%3A_Modeling_Reaction_Kinetics/
+    6.02%3A_Temperature_Dependence_of_Reaction_Rates/
+    6.2.03%3A_The_Arrhenius_Law/6.2.3.01%3A_Arrhenius_Equation
 
     Parameters:
     -----------
@@ -98,7 +103,7 @@ df_param = pd.DataFrame(index=["A", "E"])
 df_param["experimental"] = true_params
 df_param["nlr_fitted"] = nlr.coef_
 
-display(df_param)
+print(df_param)
 
 # Plot the results.
 plt.figure()
@@ -141,7 +146,7 @@ df_param["nlr_std"] = df_feature_imp["std"].values
 df_param["lower_bound_90%_conf"] = df_feature_imp["lower_bound"].values
 df_param["upper_bound_90%_conf"] = df_feature_imp["upper_bound"].values
 
-display(df_param)
+print(df_param)
 
 # Plot the prediction intervals.
 plt.figure()
@@ -178,14 +183,14 @@ plt.fill_between(
 plt.legend(loc="lower right")
 
 r"""
-Closing comments: 
-1. We can see here that the prediction intervals are really large. 
-This is expected since the error degree of freedom is 1. 
+Closing comments:
+1. We can see here that the prediction intervals are really large.
+This is expected since the error degree of freedom is 1.
 Had we had more points, we would have had more clarity.
 2. The discrepancy between the parameters we obtained and those
 obtained by the authors of the source was due to the fact they linearized
 the model while fitting it. This can sometimes be a handy trick,
-but special care should be taken about the distributions from which the 
+but special care should be taken about the distributions from which the
 data points are drawn during the transformation.
 Since they log-transformed the data, they tend to fit to the lower k region
 while we tend to fit to the higher k region. We can see that in the fit.

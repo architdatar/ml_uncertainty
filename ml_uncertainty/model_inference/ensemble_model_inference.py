@@ -1,10 +1,9 @@
 r"""
 Develops utlities to get model inference for tree-based models in scikit-learn.
 
-# TODO: Modify documentation and add proper validation.
+# TODO: Modify documentation.
 """
 
-# Imports
 import numpy as np
 from warnings import warn
 import pandas as pd
@@ -29,8 +28,9 @@ class EnsembleModelInference:
 
     Examples:
     ---------
-
-
+    examples/ensemble_model.py
+    examples/random_forest_non-normal_distribution.py
+    
     References:
     -----------
     1. Confidence interval calculations are performed using the answer
@@ -77,19 +77,73 @@ class EnsembleModelInference:
             Training data
         y_train: array of shape (n_training examples, )
             Training targets
-
+        estimator : scikit-learn ensemble model of type RandomForestRegression,
+            RandomForestClassification, etc.
+            Must be fitted.
+        use_oob_pred: bool, optional, default:True
+            Whether to use out-of-bag predictions for train data to compute
+            model mean squared errors.
+        variance_type_to_use: str, optional, {"marginal", "individual"},
+                                default="marginal"
+            How to compute mean squared errors.
+            "marginal": OOB Prediction intervals in Zhang et al. (Ref 2, class doc).
+            "individual": Method proposed by Greg Snow (Ref 1, class docs).
+        copy_X_and_y: bool, optional, default: True
+            Whether to deepcopy X_train and y_train during analysis.
+        sigma: {NoneType, float, array}, optional, default: None
+            Allows user to externally specify root mean squared error (RMSE)
+            for the fit.
+            If NoneType: The code computes based on 'variance_type_to_use' argument.
+            If float: Value interpreted as the RMSE of the fit.
+            If array: Must have shape (n_estimators,), ith element corresponding
+                to the RMSE of the ith tree.
+        distribution: {NoneType, str, callable}, optional, default: "normal"
+            Denotes assumed distribution of the residuals. Should be centered around 0.
+            Ignored if variance_type_to_use=='marginal' and 'estimate_from_SD=False'
+                in get_intervals.
+            If NoneType:
+                No distribution assumed. Only works if ignored.
+            If str:
+                Must be "normal". We provide functions internally to deal with
+                normal distribution.
+            If callable:
+                Provide a function with signature identical to
+                numpy.random.normal. See https://numpy.org/doc/stable/reference/random/
+                generated/numpy.random.normal.html.
+                Also, see ./examples/random_forest_non-normal_distribution.py
+                Inputs: (loc, scale, size, **kwargs) and outputs: scalar or array
+                scale and size should be able take and return numpy arrays.
+        distribution_kwargs: dict, optional, default={}
+            Key word arguments for the distribution function.
+        stat_generating_function: {NoneType, callable}, optional, default: None
+            Function to generate distribution stats for a list of quantile values.
+            If NoneType:
+                Constructed from 'distribution' using the
+                self._stat_generator_function if distribution is not None.
+            If callable:
+                Must have signature (quantiles, **kwargs) -> list
+                Where quantiles are a list and function must return a list of
+                distribution statistics.
+        stat_generating_function_kwargs: dict, optional, default: {}
+            Key word arguments for the stat_generating_function.
 
         Notes:
         ------
-        1. This implementation works for multioutput regression; i.e.,
-            y represents more than one target variable.
-            However, this approach is not recommended.
-            Instead, it is better to fit a separate random forest for each target.
-            and obtain inference accordingly.
-
-            The RandomForestRegressor class outputs identical feature importances
-            for all target variables. Thus, identical feature importances and
-            intervals are obtained for each output. This might not be right.
+        1.  Set 'use_oob_pred=True' only if there is a large number of trees
+            ('n_estimators' > 100), boostrap sampling is used and proportion of samples
+            used for each bootstrap is small (<0.8) to ensure that there are enough
+            trees for which each sample is out-of-bag and a good distribution can
+            be obtained.
+        2. The "marginal" method yields prediction intervals for which the coverage
+            is closer to the confidence level. So, it is used by default.
+            See tests/benchmarking/ensemble_model_prediction_interval.py.
+        2. This implementation works for multioutput regression; i.e.,
+            y represents more than one target variable (shape (n_samples, n_targets)).
+            However, this approach is not recommended. Instead, it is better to fit a
+            separate random forest for each target and obtain inference accordingly.
+            Reason: The RandomForestRegressor class outputs identical feature
+            importances for all target variables leading to identical
+            feature importance SD and intervals which is not ideal.
         """
 
         self.copy_X_and_y = copy_X_and_y
@@ -159,7 +213,7 @@ class EnsembleModelInference:
         if self.sigma is None:
             if self.variance_type_to_use == "marginal":
                 # Compute RSS overall. (1, 1, n_outputs)
-                marginal_dist = train_means - self.y_train
+                marginal_dist = self.y_train - train_means
                 MSE = np.nanmean(marginal_dist ** 2, axis=0, keepdims=True)
                 std = np.sqrt(MSE)
                 self.marginal_dist = marginal_dist
@@ -344,55 +398,48 @@ class EnsembleModelInference:
         copy_X=True,
     ):
         r"""
-        Computes intervals for the predictions of the ensemble model.
+        Computes prediction / confidence intervals regression model.
 
         Parameters
         ----------
         X : array-like of shape (n_samples, n_features)
             The data matrix.
-        estimator : scikit-learn ensemble model (fitted)
-            Model using which we wish to compute prediction intervals.
-            Must be fitted to data. Of type RandomForestRegression, RandomForestClassification, etc.
         is_train_data: bool, optional, default=False
             Indicates if the data is from the training set or not. If True,
-            only out-of-bag samples are used to compute the prediction
+            only out-of-bag estimates are used to compute the prediction
             interval.
         type_: str, optional, {"prediction", "confidence"}, default: "prediction"
             Type of the interval to be computed.
-                Prediction: Refers to the spread of the predicted value. $SE(\hat{y})$
-                Confidence: Refers to the spread of the mean of the predicted values. $SE(E(\hat{y}))$
-        compute_as: str, optional, {"non-parametric", "parametric"}, default: "non-parametric"
+                Prediction: Refers to the spread of the predicted value.
+                Confidence: Refers to the spread of the mean of the predicted values.
+        estimate_from_SD: bool, optional, default: False
             How the interval is computed.
-                If non-parametric, the appropriate data distribution is generated for the data and required quantiles are returned.
-                If parametric, the parameters of the appropriate distribution are estimated and the desired quantiles are returned.
-        confidence_level: float, default: 90.0
-            Confidence level of the interval desired.
-        side: str, {"two-sided", "lower", "upper"}, default: "two-sided"
-            Specifies if the interval desired is 2-sided, upper or lower.
-        distribution: {str, callable}, optional, default: "normal"
-            Distribution of the residuals ($ \epsilon_i $)
-            If str: allowed values is "normal".
-            If callable: Provide a function with inputs (loc, scale, size) and outputs: scalar or array
-                Basically, the function should allow inputs and outputs exactly like
-                numpy.random.normal. See https://numpy.org/doc/stable/reference/random/generated/numpy.random.normal.html.
-        distribution_kwargs: dict, optional, default: {}
-            Keyword arguments to be passed to the distribution if it is callable.
-            Else, ignored.
-        residual_standard_deviation: {None, float, array}, optional, default: None
-            Standard deviation of the residuals.
-            If None: estimated from the data and model fit.
-            If float: assumed to be uniform across the trees.
-            If array: must be array of shape (n_estimators,) indicating residual standard deviation in each tree.
+                If False, the appropriate quantiles are returned from the generated
+                    distribution.
+                If True, the parameters of the generated distribution such as
+                    standard deviation (SD) are estimated and the appropriate
+                    quantiles are returned.
+        confidence_level: float, optional, default: 90.0
+            Confidence level of the desired interval.
+        side: str, optional, {"two-sided", "lower", "upper"}, default: "two-sided"
+            Specifies the type of interval returned.
+        lsa_assumption: bool, optional, default: True
+            Whether large sample approximation can be considered to hold.
+            Only used for confidence intervals if estimate_from_SD==True. Else ignored.
+            Generally, valid if number of trees > 30.
+            If False, confidence intervals to be estimated using the
+            self.stat_generating_function.
         return_full_distribution: bool, optional, default=False
             Specifies whether to return some internal data during computation.
             If True, in addition to the normal output, returns:
                 oob_pred:  array of dimensions (n_samples, n_estimators, n_outputs)
-                    Provides full distribution of the predictions.
+                    Provides prediction for each sample by each tree for each target.
                 n_oob_pred: array of shape (n_samples, 1, n_outputs)
-                    Provides counts for the number of trees for which samples is OOB.
-                means_array: array of shape (n_samples, )
-                    Mean values of the distribution. Should match OOB predictions.
-                std_array: array of shape (n_samples, )
+                    Provides counts for the number of trees for which each
+                    sample is OOB.
+                means_array: array of shape (n_samples, 1, n_outputs)
+                    Mean values of the oob_pred over the estimators.
+                std_array: array of shape (n_samples, 1, n_outputs)
                     Standard deviations of the predicted distributions.
         copy_X: bool, optional, default: True
             Whether to copy X so that the original will remain unchanged.
@@ -400,9 +447,9 @@ class EnsembleModelInference:
         Returns
         -------
         pred_int_list: List of dataframes of length (n_outputs).
-            Each dataframe contains the mean,
-            standard deviation, median, and the desired prediction
-            / confidence intervals.
+            Each dataframe contains the mean, standard deviation, median,
+            and the lower and upper bounds of the desired prediction / confidence
+            intervals.
         """
 
         # Validate values.
@@ -590,11 +637,12 @@ class EnsembleModelInference:
         Computes the oob_pred and n_oob_pred arrays.
         The required statistics are then drawn from this array.
 
-        Source: https://github.com/scikit-learn/scikit-learn/blob/364c77e047ca08a95862becf40a04fe9d4cd2c98/sklearn/ensemble/_forest.py#L530
-                inspired from the _compute_oob_predictions() function with the
-                difference being that that function only provides the
-                mean values of the predictions while we can provide prediction
-                intervals.
+        Source: https://github.com/scikit-learn/scikit-learn/blob/
+        364c77e047ca08a95862becf40a04fe9d4cd2c98/sklearn/ensemble/_forest.py#L530
+            Inspired from the _compute_oob_predictions() function with the
+            difference being that that function only provides the
+            mean values of the predictions while we can provide prediction
+            intervals.
 
         Returns
         -------
@@ -758,7 +806,10 @@ class EnsembleModelInference:
 
         # Return the required things.
         if return_full_distribution:
-            return pred_int_list, oob_pred, n_oob_pred, means_array, std_array
+            if oob_pred is None and n_oob_pred is None:
+                return pred_int_list, means_array, std_array
+            else:
+                return pred_int_list, oob_pred, n_oob_pred, means_array, std_array
         else:
             return pred_int_list
 
@@ -769,58 +820,28 @@ class EnsembleModelInference:
         return_full_distribution=False,
     ):
         r"""
-        Computes intervals for the notional spread of the feature importance intervals.
+        Computes intervals for the spread of feature importances.
 
         Parameters
         ----------
-        estimator : scikit-learn ensemble model (fitted)
-            Model using which we wish to compute prediction intervals.
-            Must be fitted to data. Of type RandomForestRegression,
-            RandomForestClassification, etc.
-        type: str, {"prediction", "confidence"}, default: "prediction"
-            Type of the interval to be computed.
-                Prediction: Refers to the spread of the predicted value. $SE(\hat{\beta})$
-                Confidence: Refers to the spread of the mean of the predicted values. $SE(E(\hat{\beta}))$
-        distribution: str, {"non-parametric", "parametric", "default"}, default: "default"
-            Distribution of the interval to be computed.
-                If non-parametric, appropriate percentile values are returned.
-                If parametric, normal distribution is assumed (as of this version).
-                    And appropriate values depending on confidence level are returned.
-        lsa_assumption: bool, default=True
-            If distribution of the interval is considered "parametric",
-            specified is large sample approximation (LSA) can be used to compute the
-            mean and standard deviation.
-            Note: Under LSA, if the number of samples is large enough (typically >=30),
-            the mean of a sample is assumed to be normally
-             distributed irrespective of the distribution of the sample itself.
-             See docs for futher details.$
-        confidence_level: float, default: 90.0
+        confidence_level: float, optional, default: 90.0
             Confidence level of the interval desired.
-        side: str, {"two-sided", "lower", "upper"}, default: "two-sided"
-            Specifies if the interval desired is 2-sided, upper or lower.
-        return_full_distribution: bool, default=False
-            Set to True only if special statistics which are not provided here are required.
-            If True, returns the full distribution of the predicted data.
-            Returns oob_pred, an array of dimensions
-                (n_samples, n_estimators, n_outputs).
-            And n_oob_pred, an array that counts the number of non-nan
-            values for each sample in each estimator and each output value.
-            For example: If parmetric prediction interval is required with a
-                t-distribution, Poisson distribution, etc., instead of normal
-                distribution. In this case, set to True, use the oob_pred and
-                n_oob_pred arrays returned and externally compute required statistics.
+        side: str, optional, {"two-sided", "lower", "upper"}, default: "two-sided"
+            Specifies if the interval desired is two-sided, upper or lower.
+        return_full_distribution: bool, optional, default=False
+            Specifies whether to return some internal data during computation.
+            If True, in addition to the normal output, returns:
+                means_array: array of shape (n_features, 1, n_outputs)
+                    Mean values of the feature_importance over the estimators.
+                std_array: array of shape (n_samples, 1, n_outputs)
+                    Standard deviations of the feauture importances over the
+                    estimators.
 
         Returns
         -------
-        feature_imp_int_list: List of dataframes with each dataframe with containing the mean,
-            standard deviation, median, and the desired prediction /
-            confidence intervals.
-        feature_imp_array, n_feature_imp_array: Only if return_full_distribution is True
-            Arrays of shape (n_features, n_estimators, n_outputs) and
-            (n_features, 1, n_outputs), respectively.
-            feature_imp_array provides predictions by each tree for each sample at each variable.
-            n_feature_imp_array tracks the number of non-nan values predicted by each estimator at
-            each output.
+        feature_imp_int_list: List of dataframes of length (n_outputs).
+            Each dataframe contains the mean, standard deviation, median,
+            and the lower and upper bounds of the desired feature importance interval.
         """
 
         # Validates inputs.
