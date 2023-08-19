@@ -30,7 +30,7 @@ class EnsembleModelInference:
     ---------
     examples/ensemble_model.py
     examples/random_forest_non-normal_distribution.py
-    
+
     References:
     -----------
     1. Confidence interval calculations are performed using the answer

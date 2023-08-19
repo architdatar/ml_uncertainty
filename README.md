@@ -145,7 +145,9 @@ Check out some of the these [examples](examples) to try out the package. These e
 
 
 ## Benchmarking
-`NonLinearRegression`, `ParametricModelInference`, and `ErrorPropagation` classes have been benchmarked against the Python [statsmodels](https://www.statsmodels.org/stable/index.html) package. The codes for this can be found [here](tests/benchmarking/). To run these benchmarking codes, please install statsmodels using:
+`NonLinearRegression`, `ParametricModelInference`, and `ErrorPropagation` classes have been benchmarked against the Python [statsmodels](https://www.statsmodels.org/stable/index.html) package. The codes for this can be found [here](tests/benchmarking/). Discussion about the theory used can be found [here](docs/theory/parametric_models.md).
+
+To run these benchmarking codes, please install statsmodels using:
 ```
 pip install statsmodels==0.14.0
 ```
