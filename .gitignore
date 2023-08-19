@@ -104,7 +104,6 @@ ENV/
 # IDE settings
 .vscode/
 .idea/
-.flake8
 .editorconfig
 
 # Git settings
