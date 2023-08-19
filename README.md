@@ -1,12 +1,15 @@
 
 <!-- TODO : Make these dynamic-->
 ![Version badge](https://img.shields.io/badge/version-0.1.0-blue)
-![Code style badge](https://img.shields.io/badge/code_style-black-black)
-![Python bade](https://img.shields.io/badge/python-3.9-blue?logo=python)
+![Python badge](https://img.shields.io/badge/python-3.8|3.9|3.10-blue?logo=python)
+![Format](https://img.shields.io/badge/code_format-black-black)
+![Linting](https://img.shields.io/badge/code_linting-flake8-black)
+
+<!-- Add badges about black, flake8, and tests -->
 
 ML Uncertainty
 =============================
-## ML model inference, error propagation, and non-linear modelling
+## Compute prediction intervals and parameter uncertainties for ML models in 4 lines of code
 
 
 ML Uncertainty is a Python module for machine learning inference build on top of scikit-learn and autograd packages, and is distributed under the MIT license. 
@@ -27,8 +30,22 @@ However, in many use cases, especially where we have small and fat datasets, the
 
 Enter ML Uncertainty! This provides an easy API to get all these insights from models. 
 
-It takes scikit-learn fitted models as inputs and does the required statistics to generate these insights.
+It takes scikit-learn fitted models as inputs and uses appropriate statistics to quantify the uncertainties in ML models.
 
+Computing stats as easy as:
+
+```Python
+# Set up the model inference.
+inf = ParametricModelInference()
+
+inf.set_up_model_inference(X_train=X, y_train=y, estimator=regr)
+
+# Get parameter importance estimates.
+df_imp = inf.get_parameter_errors()
+
+# Get prediction intervals.
+df_int = inf.get_intervals(X)
+```
 
 Features
 --------
@@ -37,24 +54,17 @@ Features
 
      For ensemble models, it can inform if given features are truly important or if they just seem so due to the instability of the model.
 
-2. **Prediction intervals:** Can produce prediction and confidence intervals for model predictions.
+2. **Prediction intervals:** Can produce prediction and confidence intervals for mathematical models including ML models.
 
 3. **Error propagation:** For a model, what would be the prediction intervals look like given uncertainty in input data and / or model parameters? 
 
-4. **Non-Linear regression:** Provided a scikit-learn-style API to fit non-linear models. These are often encountered in scientific applications. 
+4. **Non-Linear regression:** Scikit-learn-style API to fit non-linear models. 
 
 Installation
 ------------
 ### Dependencies
 
-ml_uncertainty requires:
-
-* Python (3.9)
-* Numpy (1.20.3)
-* scipy (1.7.1)
-* pandas (1.5.3)
-* scikit-learn (1.0.2)
-* autograd (1.3)
+See [requirements.txt](./requirements.txt) for dependencies.
 
 ### User installation
 
@@ -70,6 +80,8 @@ ml_uncertainty requires:
     ```
     python --version
     ```    
+
+    Ensure that it is one of the allowed versions. Else, use a different Python version.
 
     ##### Create environment
     ```
@@ -95,7 +107,7 @@ ml_uncertainty requires:
 
     ##### Activate environment
     ```
-    source "DIRECTORY_TO_YOUR_ENV/ENV_NAME/bin/activate"
+    source "PATH_TO_YOUR_ENV/ENV_NAME/bin/activate"
     ```
 
 3. Install ml_uncertainty.
@@ -107,7 +119,7 @@ ml_uncertainty requires:
     The package should install automatically.
 
 
-### Testing
+### Testing (OPTIONAL)
 To test the package and ensure that it runs correctly, navigate to the package folder and type:
 ```
 pytest
@@ -121,7 +133,7 @@ To run the [examples](examples), some additional plots need to be made which req
 pip install matplotlib seaborn
 ```
 
-Check out these examples to try out the package. These examples are best run in VS code. 
+Check out some of the these [examples](examples) to try out the package. These examples are best run in [VS code](https://code.visualstudio.com/). 
 * [Non-linear regression example with a quadratic model](examples/non_linear_regression_quadratic.py)
 * [Non-linear regression example with an Arrhenius model](examples/non_linear_regression_arrhenius.py)
 * [Parametric model inference with Arrhenius model](examples/parametric_model.py)
@@ -133,12 +145,13 @@ Check out these examples to try out the package. These examples are best run in 
 
 
 ## Benchmarking
-`NonLinearRegression`, `ParametricModelInference`, and `ErrorPropagation` classes have been benchmarked against the Python [statsmodels](https://www.statsmodels.org/stable/index.html) package. The codes for this can be found [here](tests/benchmarking/sm_linear_models.py). To run these benchmarking codes, please install statsmodels using:
+`NonLinearRegression`, `ParametricModelInference`, and `ErrorPropagation` classes have been benchmarked against the Python [statsmodels](https://www.statsmodels.org/stable/index.html) package. The codes for this can be found [here](tests/benchmarking/). To run these benchmarking codes, please install statsmodels using:
 ```
 pip install statsmodels==0.14.0
 ```
 
-The `EnsembleModelInference` does not have a code to benchmark it against to the best of my knowledge. However, it has followed ideas mentioned in various sources such as [Elements of Statistical Learning, Pg 249](https://hastie.su.domains/ElemStatLearn/), this [Stackoverflow answer](https://stats.stackexchange.com/questions/56895/do-the-predictions-of-a-random-forest-model-have-a-prediction-interval), and a few others.
+The `EnsembleModelInference` does not have a code to benchmark it against to the best of my knowledge. However, the code follows the ideas developed in the work by [Zhang et al. (2020)](https://www.tandfonline.com/doi/abs/10.1080/00031305.2019.1585288?journalCode=utas20). The test is that a $(1-\alpha)\times100$ % prediction interval must contain $(1-\alpha)$ proportion of the training data. See benchmarking codes [here](tests/benchmarking/) and more discussion [here](docs/theory/ensemble_models.md). 
+
 
 Credits
 -------

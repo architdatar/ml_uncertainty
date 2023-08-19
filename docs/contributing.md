@@ -22,6 +22,7 @@ Topics
     functions that might not be 2-times differenciable. Refer to Niclas Borgin's lectures.
     (J'J)
 3. Extend to classification models such as LogisticRegression, etc.
+4. Simplify and show examples for computing prediction intervals for non-normal distributions. Allow users to specify a distribution, use the stat generator function idea from ensemble model inference, and get prediction intervals.
 
 
 ## Ensemble models
