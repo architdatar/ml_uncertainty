@@ -12,9 +12,9 @@ Types of Contributions
 ### Report Bugs
 
 
-<!-- Report bugs at https://github.com/architdatar/ml_uncertainty/issues. -->
+Report bugs at https://github.com/architdatar/ml_uncertainty/issues.
 
-Report bugs by emailing me (archit.datar@celanese.com) or creating a work item on the [Project Board](https://dev.azure.com/CelaneseCorporation/TI%20Data%20Science%20Projects/_boards/directory). Create new item, right click and select `Add Task`, and report the bug in `Task`.
+<!-- Report bugs by emailing me (archit.datar@celanese.com) or creating a work item on the [Project Board](https://dev.azure.com/CelaneseCorporation/TI%20Data%20Science%20Projects/_boards/directory). Create new item, right click and select `Add Task`, and report the bug in `Task`. -->
 
 If you are reporting a bug, please include:
 
@@ -46,9 +46,9 @@ If there are any enhancements / corrections to be made in the theory used, which
 
 ### Submit Feedback
 
-<!-- The best way to send feedback is to file an issue at https://github.com/architdatar/ml_uncertainty/issues. -->
+The best way to send feedback is to file an issue at https://github.com/architdatar/ml_uncertainty/issues.
 
-The best way to send feedback is to file an issue as shown for [bugs](#report-bugs).
+<!-- The best way to send feedback is to file an issue as shown for [bugs](#report-bugs). -->
 
 If you are proposing a feature:
 
@@ -62,12 +62,12 @@ Get Started!
 
 Ready to contribute? Here's how to set up `ml_uncertainty` for local development.
 
-<!-- 1. Fork the `ml_uncertainty` repo on GitHub. -->
-<!-- 2. Clone your fork locally::
+1. Fork the `ml_uncertainty` repo on GitHub.
+2. Clone your fork locally::
 
-    $ git clone git@github.com:your_name_here/ml_uncertainty.git -->
-1. Fork the `ml_unceratinty` repo. Use the button with three dots to the right of `Clone`. 
-2. Clone repo from ADO (easiest way is to use [VS Code](https://code.visualstudio.com/)).
+    $ git clone git@github.com:your_name_here/ml_uncertainty.git
+<!-- 1. Fork the `ml_unceratinty` repo. Use the button with three dots to the right of `Clone`. 
+2. Clone repo from ADO (easiest way is to use [VS Code](https://code.visualstudio.com/)). -->
 3. Install your local copy into a virtualenv. Using one of the supported Python versions (see above), this is how you set up your fork for local development:
 
     ```
