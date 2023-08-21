@@ -1,11 +1,10 @@
-=======
 Credits
 =======
 
 Development Lead
 ----------------
 
-* Archit Nikhil Datar <architdatar@gmail.com>
+* Archit Nikhil Datar (architdatar@gmail.com, archit.datar@celanese.com)
 
 Contributors
 ------------
