@@ -50,3 +50,72 @@ jobs:
 
     -script: tox -e flake8
     displayName: 'Run tox flake8'    
+
+# Output from GPT-4
+trigger:
+- main
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+steps:
+- task: UsePythonVersion@0
+  inputs:
+    versionSpec: '3.10'
+    addToPath: true
+
+- script: pip install tox
+  displayName: 'Install tox'
+
+- script: tox -e black
+  displayName: 'Run black'
+
+- script: tox -e flake8
+  displayName: 'Run flake8'
+
+- script: tox -e py38
+  displayName: 'Run py38'
+
+- script: tox -e py39
+  displayName: 'Run py39'
+
+- script: tox -e py310
+  displayName: 'Run py310'
+
+# 
+trigger:
+- main
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+strategy:
+  matrix:
+    black:
+      toxArg: black
+    flake8:
+      toxArg: flake8
+    py38:
+      toxArg: py38
+    py39:
+      toxArg: py39
+    py310:
+      toxArg: py310
+
+steps:
+- task: UsePythonVersion@0
+  inputs:
+    versionSpec: '3.10'
+    addToPath: true
+
+- script: pip install tox
+  displayName: 'Install tox'
+
+- script: tox -e $(toxArg)
+  displayName: 'Run $(toxArg)'
+
+# TODO: 1. Install Python 3.10 in this system and run tox for it.
+# 2. Try using pytest parallel and pytest cov with the appropriate packages.
+# 3. Output test results in terminal as well as xml output files.
+# 4. Make the required changes to README and Azure pipelines to run tests
+# in cross-platform environments. 

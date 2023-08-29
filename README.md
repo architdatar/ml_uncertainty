@@ -102,19 +102,20 @@ See [requirements.txt](./requirements.txt) for dependencies.
 
     ##### Create environment
     ```
-    python venv "DIRECTORY_TO_YOUR_ENV/ENV_NAME"
+    python -m venv "PATH_TO_YOUR_ENV"
     ```
 
     ##### Activate environment
     ```
-    source "PATH_TO_YOUR_ENV/ENV_NAME/bin/activate"
+    source "PATH_TO_YOUR_ENV/bin/activate"
     ```
+For windows, this is Scripts/Activate
 
 3. Install ml_uncertainty.
     
     Navigate to the ml_uncertainty folder from step 1 and in the terminal, type 
     ```
-    pip install ml_uncertainty
+    pip install .
     ```
     The package should install automatically.
 
