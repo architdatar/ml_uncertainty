@@ -1,11 +1,11 @@
 
-<!-- TODO : Make these dynamic-->
 ![Version badge](https://img.shields.io/badge/version-0.1.0-blue)
-![Python badge](https://img.shields.io/badge/python-3.8|3.9|3.10-blue?logo=python)
-![Format](https://img.shields.io/badge/code_format-black-black)
-![Linting](https://img.shields.io/badge/code_linting-flake8-black)
-
-<!-- Add badges about black, flake8, and tests -->
+![Python badge](https://img.shields.io/badge/python-3.8|3.9|3.10|3.11|3.12-blue?logo=python)
+![License badge](https://img.shields.io/badge/License-MIT-blue)
+![Format badge](https://img.shields.io/badge/code_format-black-black)
+![Linting badge](https://img.shields.io/badge/code_linting-flake8-black)
+![Test badge](https://img.shields.io/badge/tests-pytest-black?logo=pytest)
+<!-- [![Build Status](https://dev.azure.com/CelaneseCorporation/TI%20Data%20Science%20Projects/_apis/build/status%2Fml_uncertainty%20(1)?branchName=main)](https://dev.azure.com/CelaneseCorporation/TI%20Data%20Science%20Projects/_build/latest?definitionId=183&branchName=main) -->
 
 ML Uncertainty
 =============================
@@ -14,7 +14,7 @@ ML Uncertainty
 
 ML Uncertainty is a Python module for machine learning inference build on top of scikit-learn and autograd packages, and is distributed under the MIT license. 
 
-This package has been built by Archit Datar (archit.datar@celanese.com, architdatar@gmail.com). 
+This package has been built by Archit Datar (architdatar@gmail.com). 
 
 Intended audience
 ----
@@ -22,22 +22,21 @@ This package is intended to benefit data scientists and ML enthusiasts.
 
 Motivation
 ----
-Too often in machine learning, we fit complex models, but cannot produce prediction intervals or feature significance. 
+* Too often in machine learning, we fit complex models, but cannot quantity their precision via prediction intervals or feature significance.
 
-This is especially true of the scikit-learn environment which is extremely easy to use but does not offer these functionalities.  
+* This is especially true of the scikit-learn environment which is extremely easy to use but does not offer these functionalities.
 
-However, in many use cases, especially where we have small and fat datasets, these are insights are critical to produce reliable models and insights. 
+* However, in many use cases, especially where we have small and fat datasets, these are insights are critical to produce reliable models and insights. 
 
-Enter ML Uncertainty! This provides an easy API to get all these insights from models. 
+* Enter ML Uncertainty! This provides an easy API to get all these insights from models.
 
-It takes scikit-learn fitted models as inputs and uses appropriate statistics to quantify the uncertainties in ML models.
+* It takes scikit-learn fitted models as inputs and uses appropriate statistics to quantify the uncertainties in ML models.
 
 Computing stats as easy as:
 
 ```Python
 # Set up the model inference.
 inf = ParametricModelInference()
-
 inf.set_up_model_inference(X_train=X, y_train=y, estimator=regr)
 
 # Get parameter importance estimates.
@@ -54,80 +53,22 @@ Features
 
      For ensemble models, it can inform if given features are truly important or if they just seem so due to the instability of the model.
 
-2. **Prediction intervals:** Can produce prediction and confidence intervals for mathematical models including ML models.
+2. **Prediction intervals:** Can produce prediction and confidence intervals for parametric and non-parametric ML models.
 
-3. **Error propagation:** For a model, what would be the prediction intervals look like given uncertainty in input data and / or model parameters? 
+3. **Error propagation:** Propagates error from input / model parameters to the outputs.
 
 4. **Non-Linear regression:** Scikit-learn-style API to fit non-linear models. 
 
 Installation
 ------------
 ### Dependencies
-
-See [requirements.txt](./requirements.txt) for dependencies.
+Python versions: See badges above.
+Packages: See [requirements.txt](./requirements.txt).
 
 ### User installation
+See [./docs/installation.md](/docs/installation.md).
 
-#### Basic user installation
-1. Clone / download this repo.
-2. Create and activate new virtual environment with the required Python version. 
-
-    Alternatively, you may also install it in your existing environment, but this is not recommended as some of your existing packages might change.
-
-    #### Using conda
-    ##### Check current Python version
-    In the conda terminal (can be accessed via Jupyter notebook / VS code ipython by using `! <TERMINAL CODE>`), type:
-    ```
-    python --version
-    ```    
-
-    Ensure that it is one of the allowed versions. Else, use a different Python version.
-
-    ##### Create environment
-    ```
-    conda create -n <ENV_NAME> python=<REQUIRED PYTHON VERSION> 
-    ```
-
-    ##### Activate environment
-    ```
-    conda activate <ENV_NAME>
-    ```
-
-    #### Using Python
-    ##### Check current Python version
-    In terminal, type:
-    ```
-    python --version
-    ```
-
-    ##### Create environment
-    ```
-    python venv "DIRECTORY_TO_YOUR_ENV/ENV_NAME"
-    ```
-
-    ##### Activate environment
-    ```
-    source "PATH_TO_YOUR_ENV/ENV_NAME/bin/activate"
-    ```
-
-3. Install ml_uncertainty.
-    
-    Navigate to the ml_uncertainty folder from step 1 and in the terminal, type 
-    ```
-    pip install ml_uncertainty
-    ```
-    The package should install automatically.
-
-
-### Testing (OPTIONAL)
-To test the package and ensure that it runs correctly, navigate to the package folder and type:
-```
-pytest
-```
-
-If it passes all tests, it means that the package has been correctly installed. 
-
-### Examples
+## Examples
 To run the [examples](examples), some additional plots need to be made which require matplotlib and seaborn packages. These can be installed using:
 ```
 pip install matplotlib seaborn
@@ -141,18 +82,23 @@ Check out some of the these [examples](examples) to try out the package. These e
 * [Model inference for a random forest regressor model](examples/ensemble_model.py)
 
 
+## Theoretical foundations
 
+Discussion about the theory used can be found here:
+
+* [Parametric models](docs/theory/parametric_models.md)
+* [Ensemble models](docs/theory/ensemble_models.md)
 
 
 ## Benchmarking
-`NonLinearRegression`, `ParametricModelInference`, and `ErrorPropagation` classes have been benchmarked against the Python [statsmodels](https://www.statsmodels.org/stable/index.html) package. The codes for this can be found [here](tests/benchmarking/). Discussion about the theory used can be found [here](docs/theory/parametric_models.md).
+`NonLinearRegression`, `ParametricModelInference`, and `ErrorPropagation` classes have been benchmarked against the Python [statsmodels](https://www.statsmodels.org/stable/index.html) package. The codes for this can be found [here](tests/benchmarking/). 
 
 To run these benchmarking codes, please install statsmodels using:
 ```
 pip install statsmodels==0.14.0
 ```
 
-The `EnsembleModelInference` does not have a code to benchmark it against to the best of my knowledge. However, the code follows the ideas developed in the work by [Zhang et al. (2020)](https://www.tandfonline.com/doi/abs/10.1080/00031305.2019.1585288?journalCode=utas20). The test is that a $(1-\alpha)\times100$ % prediction interval must contain $(1-\alpha)$ proportion of the training data. See benchmarking codes [here](tests/benchmarking/) and more discussion [here](docs/theory/ensemble_models.md). 
+The `EnsembleModelInference` does not have a code to benchmark it against to the best of my knowledge. However, the code follows the ideas developed in the work by [Zhang et al. (2020)](https://www.tandfonline.com/doi/abs/10.1080/00031305.2019.1585288?journalCode=utas20). The test is that a $(1-\alpha)\times100$ % prediction interval must contain $(1-\alpha)$ proportion of the training data. See benchmarking codes [here](tests/benchmarking/). 
 
 
 Credits

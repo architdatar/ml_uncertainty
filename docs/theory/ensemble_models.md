@@ -40,7 +40,7 @@ We compared two kinds of prediction intervals.
 
 This approach was suggested in Zhang et al in Ref 2 and it is called *OOB Prediction Intervals* in the work.
 
-Basically, the idea is that the prediction interval for any $\hat{y_i}$ can be computed from the distribution of training errors. 
+Basically, the idea is that the prediction interval for any $\hat{y_i}$ can be computed from the distribution of training residuals computed with *Out-of-bag (OOB)* training samples. It is given as: 
 
 $$ \{ D_i \equiv y_i  - \hat{y}_{(i)} \}_{i=1}^N $$
 
@@ -63,7 +63,7 @@ $$ \sigma^2_k = \frac{1}{N}\sum_{i=1}^N(y_{ik} - y_i)^2 $$
 
 Then for each sample as predicted by each tree, draw a sample from the assumed distribution ($\mathcal{D}$) with mean 0 and variance $\sigma^2_k$. Finally, the interval was estimated by the required quantiles of this distribution.
 
-Effectively, this turns out to be equivalent to pooling the variance estimates from trees and adding it to the SD of the confidence interval.
+Effectively, this is equivalent to pooling the variance estimates from trees and adding it to the SD of the confidence interval.
 
 $$ \sigma^2_{pooled} = \frac{1}{K} \sum_{k=1}^K \sigma^2_k $$
 
@@ -79,7 +79,7 @@ So, this approach is *NOT* recommended by default.
 #### Issues
 Before reproducing this approach, we tried to validate this approach in R (see benchmarking in [R](../../tests/benchmarking/ensemble_model_validation.R)). However, we were unable to reproduce the predictions and `fit$mse` values reported in the `randomForest` library by Breiman [Ref 3]. 
 
-Maybe this can be investigated later.
+This can be investigated in future.
 
 
 

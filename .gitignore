@@ -106,5 +106,5 @@ ENV/
 .idea/
 .editorconfig
 
-# Git settings
-.github
+# DS store
+*/.DS_store

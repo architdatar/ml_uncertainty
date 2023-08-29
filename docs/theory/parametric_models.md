@@ -7,13 +7,13 @@
 #### Linear models
 Typically for a linear model with intercept such as:
 
-$$ y = \beta_0 + \textbf{X}_{(n,p)}\beta_{(p, 1)} $$ 
+$$ y = \beta_0 + \textbf{X}_{n \times p}\beta_{p \times 1} $$ 
 
 The degrees of freedom are p.
 
 For linear models without intercept such as:
 
-$$ y = \textbf{X}_{(n,p)}\beta_{(p, 1)} $$ 
+$$ y = \textbf{X}_{n \times p}\beta_{p \times 1} $$ 
 
 The degrees of freedom are also p. 
 
@@ -29,7 +29,7 @@ However, in the literature, some people have approximated the model degrees of f
 
 I.e., for a non-linear model given by:
 
-$$ y = f(\textbf{X}_{(n,p)}, \beta_{(p, 1)}) $$
+$$ y = f(\textbf{X}_{n \times p}, \beta_{p \times 1}) $$
 
 Degrees of freedom = $p$. 
 
@@ -37,7 +37,7 @@ In version 0.1.0 for this code, we assume that any non-linear model is of this f
 
 However, we also allow users to specify a model intercept as the first parameter. This can be done using the argument `fit_intercept=True` in the `NonLinearRegression` model class. In this case, we assume that the model is of the form:
 
-$$ y = \beta_0 + f(\textbf{X}_{(n,p)}, \beta_{(p, 1)}) $$
+$$ y = \beta_0 + f(\textbf{X}_{n \times p}, \beta_{p \times 1}) $$
 
 
 ### 2. L1 Regularization
@@ -54,7 +54,7 @@ $$ \mathcal{L(\hat{y}, y)} = r(\hat{y}, y)^Tr(\hat{y}, y) + \lambda ||\beta_p||_
 
 The degrees of freedom are:
 
-$$ df(\lambda) = \sum_{i=1}^p \frac{d_j^2}{d_j^2+\lambda} $$
+$$ df(\lambda) = \sum_{j=1}^p \frac{d_j^2}{d_j^2+\lambda} $$
 
 Where $d_j$ is the $j^{th}$ diagonal entry of the $ \textbf{D}$ matrix containing the singular values of the design matrix $\textbf{X} $ in the equation
 
@@ -68,7 +68,7 @@ Let's call this set the active set $\mathcal{A}$.
 
 Then, the degrees of freedom are calculated as
 
-$$ df(\lambda) = \sum_{i=1, i\in\mathcal{A}}^p \frac{d_j^2}{d_j^2+\lambda} $$
+$$ df(\lambda) = \sum_{j=1, j\in\mathcal{A}}^p \frac{d_j^2}{d_j^2+\lambda} $$
 
 This is inferred from the degrees of freedom computation in this case as discussed in a talk by Hui Zou [Ref 3] where 
 
@@ -81,13 +81,13 @@ For training data with $n$ samples,
 
 Total dof = $n-1$
 
-Residual degrees of freedom = Total dof - model dof
+Residual degrees of freedom (dof) = Error dof = Total dof - model dof
 
-## Estimating mean sum of squares ($\sigma^2$)
+## Estimating mean sum of squares ($\hat{\sigma}^2$)
 
 Given as residual sum of squares divided by error degrees of freedom.
 
-$$ \sigma^2 =  \frac{r(\hat{y}, y)^Tr(\hat{y}, y)} {error\ dof}$$
+$$ \hat{\sigma}^2 =  \frac{r(\hat{y}, y)^Tr(\hat{y}, y)} {\mathrm{Error\ dof}}$$
 
 ## Calculation of the variance-covariance matrix
 
@@ -97,7 +97,7 @@ Basically, it is related to the Hessian matrix of the loss with respect to the p
 
 For some loss function which can be written in terms of model parameters $ \mathcal{L}(\beta) $, the variance-covariance matrix of the fitted parameters can be given as
 
-$$ Var(\hat{\beta}) = \sigma^2(\nabla^2\mathcal{L}(\hat{\beta}))^{-1}$$
+$$ Var(\hat{\beta}) = \hat{\sigma}^2(\nabla^2\mathcal{L}(\hat{\beta}))^{-1}$$
 
 ## Estimating confidence and prediction intervals
 
@@ -124,11 +124,12 @@ which was calculated from the previous equation.
 
 However, to get prediction intervals, we wish to estimate
 
-$$ Var(\hat{y} | \bf{X}, \bm{\beta}) $$
+$$ Var(\hat{y} | \mathbf{X}, \bm{\beta}) $$
 
 This is given by adding the MSE to the confidence interval variance.
 
-$$ Var(\hat{y} | \bf{X}, \bm{\beta}) = Var(\hat{y} | \bf{X}, \bm{\beta}) + \sigma^2 $$
+$$ Var(\hat{y} | \mathbf{X}, \bm{\beta}) = Var(E(\hat{y} | \mathbf{X}, \bm{\beta})) + 
+\hat{\sigma}^2 $$
 
 
 
