@@ -1,8 +1,3 @@
-# Python package
-# Create and test a Python package on multiple Python versions.
-# Add steps that analyze code, save the dist with the build record, publish to a PyPI-compatible index, and more:
-# https://docs.microsoft.com/azure/devops/pipelines/languages/python
-
 trigger: none
 
 strategy:
@@ -49,7 +44,7 @@ strategy:
       vmImage: windows-2019
 
 pool:
-  vmImage: $ (vmImage)
+  vmImage: $(vmImage)
 
 steps:
 - task: UsePythonVersion@0
@@ -62,9 +57,4 @@ steps:
 
 - script: tox -e $(toxArg)
   displayName: 'Run $(toxArg)'
-
-# TODO: 1. Install Python 3.10 in this system and run tox for it. (NOT doing)
-# 2. Try using pytest parallel and pytest cov with the appropriate packages.
-# 3. Output test results in terminal as well as xml output files.
-# 4. Make the required changes to README and Azure pipelines to run tests
-# in cross-platform environments. 
+ 

@@ -32,7 +32,7 @@ wanted" is open to whoever wants to implement it.
 Look through the issues for features. Anything tagged with "enhancement"
 and "help wanted" is open to whoever wants to implement it.
 
-Some new feature ideas can also be found [here](docs/contributing.md).
+Some new feature ideas can also be found [here](/docs/feature_ideas.md).
 
 ### Write Documentation
 
@@ -42,7 +42,7 @@ articles, and such.
 
 ### Enhance the theory
 
-If there are any enhancements / corrections to be made in the theory used, which you can read [here](docs/theory/), please [report them as a bug](#report-bugs).
+If there are any enhancements / corrections to be made in the theory used, which you can read [here](/docs/theory/), please [report them as a bug](#report-bugs).
 
 ### Submit Feedback
 
@@ -123,15 +123,6 @@ Before you submit a pull request, check that it meets these guidelines:
    https://travis-ci.com/architdatar/ml_uncertainty/pull_requests
    and make sure that the tests pass for all supported Python versions. -->
 3. The pull request should work with all the Python versions listed above. This should be ensured by testing with tox.
-
-Tips
-----
-
-To run a subset of tests:
-
-```
-pytest tests.test_ml_uncertainty
-```
 
 <!-- Deploying
 ---------

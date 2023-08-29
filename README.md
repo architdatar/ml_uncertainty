@@ -2,6 +2,7 @@
 <!-- TODO : Make these dynamic-->
 ![Version badge](https://img.shields.io/badge/version-0.1.0-blue)
 ![Python badge](https://img.shields.io/badge/python-3.8|3.9|3.10-blue?logo=python)
+![License](https://img.shields.io/badge/License-MIT-ye)
 ![Format](https://img.shields.io/badge/code_format-black-black)
 ![Linting](https://img.shields.io/badge/code_linting-flake8-black)
 
