@@ -2,10 +2,11 @@
 <!-- TODO : Make these dynamic-->
 ![Version badge](https://img.shields.io/badge/version-0.1.0-blue)
 ![Python badge](https://img.shields.io/badge/python-3.8|3.9|3.10-blue?logo=python)
-![License](https://img.shields.io/badge/License-MIT-ye)
-![Format](https://img.shields.io/badge/code_format-black-black)
-![Linting](https://img.shields.io/badge/code_linting-flake8-black)
-
+![License badge](https://img.shields.io/badge/License-MIT-blue)
+![Format badge](https://img.shields.io/badge/code_format-black-black)
+![Linting badge](https://img.shields.io/badge/code_linting-flake8-black)
+![Test badge](https://img.shields.io/badge/tests-pytest-black?logo=pytest)
+[![Build Status](https://dev.azure.com/CelaneseCorporation/TI%20Data%20Science%20Projects/_apis/build/status%2Fml_uncertainty%20(1)?branchName=main)](https://dev.azure.com/CelaneseCorporation/TI%20Data%20Science%20Projects/_build/latest?definitionId=183&branchName=main)
 <!-- Add badges about black, flake8, and tests -->
 
 ML Uncertainty
