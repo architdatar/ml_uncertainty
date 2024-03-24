@@ -1,50 +1,138 @@
-Topics
-========
+Contributing
+============
 
-## Non-Linear Regression
+Contributions are welcome, and they are greatly appreciated! Every little bit
+helps, and credit will always be given.
 
-1. Add capabilities for regularization: Use scipy.optimize.minimize function to optimize and build the loss function as shown in ParametricModelInference.
-2. Enable non-explicit constrained optimization: Use scipy.optimize.minimize to optimize - Create loss function as in ParametricModelInference class.
-3. Accurate degree of freedom calculations for non-linear models: Currently, the model degrees of freedom are computed by considering the number of model parameters. But for true non-linear functions, these should be computed as shown in Hastie et al, [Elements of Statistical Learning](https://hastie.su.domains/ElemStatLearn/) Pg 233. 
-4. For L2 regularization for non-linear models, see Eq. 7.34 on Pg 233 of Hastie et al, [Elements of Statistical Learning](https://hastie.su.domains/ElemStatLearn/).  
+You can contribute in many ways:
 
-    For 3, 4: Develop code using simulations, see documentation for ensemble model inference degrees of freedom calculation.
+Types of Contributions
+----------------------
 
-5. Implement cross-validation with sklearn grid search. 
-6. See if it can be used with sklearn pipelines.
-
-## Parametric model inference
-
-1. For linear models and ridge, there is a closed form
-    solution. Var[b]=σ2(X′X)−1. See [here](https://stats.stackexchange.com/questions/68151/how-to-derive-variance-covariance-matrix-of-coefficients-in-linear-regression).
-    [For ridge: ](https://online.stat.psu.edu/stat857/node/155/)under Properties of Ridge estimator.
-2. Allow users to compute Hessian through a first-order approximation for
-    functions that might not be 2-times differenciable. Refer to Niclas Borgin's lectures.
-    (J'J)
-3. Extend to classification models such as LogisticRegression, etc.
-4. Simplify and show examples for computing prediction intervals for non-normal distributions. Allow users to specify a distribution, use the stat generator function idea from ensemble model inference, and get prediction intervals.
+### Report Bugs
 
 
-## Ensemble models
-1. Create tests for other kinds of models such as gradient boosting and classification models.
-2. Create tests for model significance. Basically to answer the question: is the model better than the null model? 
-        1. Refer to the book [Nonparametric Statistical Methods](https://www.wiley.com/en-us/Nonparametric+Statistical+Methods,+3rd+Edition-p-9780470387375) and see which tests can be used as non-parametric version of the F-test. 
-        2. To achieve this, we will require to compute degrees of freedom of non-parametric models. The MC algorithm for 
-        this has been discussed in DOI: 10.1080/01621459.1998.10474094. 
-        Algorithm to do so is mentioned in Pg 122, algorithm 1
-            1. Basic idea of the method is to create t perturbations in Y and measure the efects on $\hat{y}$. 
-        Results can be compared with URL: https://arxiv.org/pdf/1911.00190.pdf Pg 11 and 12. 
+<!-- Report bugs at https://github.com/architdatar/ml_uncertainty/issues. -->
 
-4. Create wrappers for more non-normal distributions as done in the [example](../examples/random_forest_non-normal_distribution.py).
-5. Incorporate sample weights to compute prediction and confidence intervals.
-6. Investigate: Attempt to reproduce results from `fit$predicted` and `fit$mse` from `pred$individual` in the `randomForest` library in R. Hasn't been possible thus far.
+Report bugs by emailing me (archit.datar@celanese.com) or creating a work item on the [Project Board](https://dev.azure.com/CelaneseCorporation/TI%20Data%20Science%20Projects/_boards/directory). Create new item, right click and select `Add Task`, and report the bug in `Task`.
 
+If you are reporting a bug, please include:
 
-## General
-1. Enable model signficance tests: 
-    Analogous to F-tests for ordinary least squares regression. Implement F-tests for parametric models (with appropriate assumptions) and various distributions.
-    
+* Your operating system name and version.
+* Any details about your local setup that might be helpful in troubleshooting.
+* Detailed steps to reproduce the bug.
 
-## Documentation
-1. Write more documentation for internal methods.
-2. More documentation for class attributes.
+### Fix Bugs
+
+Look through the Boards for bugs. Anything tagged with "bug" and "help
+wanted" is open to whoever wants to implement it.
+
+### Implement Features
+
+Look through the issues for features. Anything tagged with "enhancement"
+and "help wanted" is open to whoever wants to implement it.
+
+Some new feature ideas can also be found [here](/docs/feature_ideas.md).
+
+### Write Documentation
+
+ML Uncertainty Quantification could always use more documentation, whether as part of the
+official ML Uncertainty Quantification docs, in docstrings, or even on the web in blog posts,
+articles, and such.
+
+### Enhance the theory
+
+If there are any enhancements / corrections to be made in the theory used, which you can read [here](/docs/theory/), please [report them as a bug](#report-bugs).
+
+### Submit Feedback
+
+<!-- The best way to send feedback is to file an issue at https://github.com/architdatar/ml_uncertainty/issues. -->
+
+The best way to send feedback is to file an issue as shown for [bugs](#report-bugs).
+
+If you are proposing a feature:
+
+* Explain in detail how it would work.
+* Keep the scope as narrow as possible, to make it easier to implement.
+* Remember that this is a volunteer-driven project, and that contributions
+  are welcome :)
+
+Get Started!
+------------
+
+Ready to contribute? Here's how to set up `ml_uncertainty` for local development.
+
+<!-- 1. Fork the `ml_uncertainty` repo on GitHub. -->
+<!-- 2. Clone your fork locally::
+
+    $ git clone git@github.com:your_name_here/ml_uncertainty.git -->
+1. Fork the `ml_unceratinty` repo. Use the button with three dots to the right of `Clone`. 
+2. Clone repo from ADO (easiest way is to use [VS Code](https://code.visualstudio.com/)).
+3. Install your local copy into a virtualenv. Using one of the supported Python versions (see above), this is how you set up your fork for local development:
+
+    ```
+    pip install virtualenv
+    virtualenv VIRTUAL_ENV_PATH/VIRTUAL_ENV_NAME
+    cd ml_uncertainty/
+    pip install -r requirements_dev.txt
+    ```
+4. Create a branch for local development::
+    ```
+    git checkout -b name-of-your-bugfix-or-feature
+    ```
+   Now you can make your changes locally.
+
+5. When you're done making changes, check that your changes pass the black, flake8, and pytests implemented in tox. This also includes testing other Python versions. 
+    ```
+    tox
+    ```
+
+    TIP: Keep checking your code intermittently with pytest, black, and flake8 to make sure that it is correct. 
+    ```
+    pytest
+    black --check ml_uncertainty tests examples
+    flake8 ml_uncertainty tests examples
+    ```
+
+6. Commit your changes and push your branch:
+    ```
+    git add .
+    git commit -m "Your detailed description of your changes."
+    ```
+    Ensure that your branch is in sync with the latest version of the main branch.
+    ```    
+    git pull origin main 
+    ```
+    Push to your branch
+    ```
+    git push origin name-of-your-bugfix-or-feature
+    ```
+
+7. Submit a pull request through the website.
+
+Pull Request Guidelines
+-----------------------
+
+Before you submit a pull request, check that it meets these guidelines:
+
+1. The pull request should include tests.
+2. If the pull request adds functionality, the docs should be updated. Put
+   your new functionality into a function with a docstring, and add the
+   feature to the list in README.md.
+<!-- 3. The pull request should work for Python 3.5, 3.6, 3.7 and 3.8, and for PyPy. Check
+   https://travis-ci.com/architdatar/ml_uncertainty/pull_requests
+   and make sure that the tests pass for all supported Python versions. -->
+3. The pull request should work with all the Python versions listed above. This should be ensured by testing with tox.
+
+<!-- Deploying
+---------
+
+A reminder for the maintainers on how to deploy.
+Make sure all your changes are committed (including an entry in HISTORY.md).
+Then run::
+
+$ bump2version patch # possible: major / minor / patch
+$ git push
+$ git push --tags
+
+Travis will then deploy to PyPI if tests pass. -->
