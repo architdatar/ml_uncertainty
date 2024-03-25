@@ -106,5 +106,3 @@ ENV/
 .idea/
 .editorconfig
 
-# Git settings
-.github

@@ -12,9 +12,7 @@ Types of Contributions
 ### Report Bugs
 
 
-<!-- Report bugs at https://github.com/architdatar/ml_uncertainty/issues. -->
-
-Report bugs by emailing me (archit.datar@celanese.com) or creating a work item on the [Project Board](https://dev.azure.com/CelaneseCorporation/TI%20Data%20Science%20Projects/_boards/directory). Create new item, right click and select `Add Task`, and report the bug in `Task`.
+Report bugs at https://github.com/architdatar/ml_uncertainty/issues.
 
 If you are reporting a bug, please include:
 
@@ -46,7 +44,7 @@ If there are any enhancements / corrections to be made in the theory used, which
 
 ### Submit Feedback
 
-<!-- The best way to send feedback is to file an issue at https://github.com/architdatar/ml_uncertainty/issues. -->
+The best way to send feedback is to file an issue at https://github.com/architdatar/ml_uncertainty/issues.
 
 The best way to send feedback is to file an issue as shown for [bugs](#report-bugs).
 
@@ -62,20 +60,43 @@ Get Started!
 
 Ready to contribute? Here's how to set up `ml_uncertainty` for local development.
 
-<!-- 1. Fork the `ml_uncertainty` repo on GitHub. -->
-<!-- 2. Clone your fork locally::
+1. Fork the `ml_uncertainty` repo on GitHub.
+2. Clone your fork locally::
 
-    $ git clone git@github.com:your_name_here/ml_uncertainty.git -->
-1. Fork the `ml_unceratinty` repo. Use the button with three dots to the right of `Clone`. 
-2. Clone repo from ADO (easiest way is to use [VS Code](https://code.visualstudio.com/)).
-3. Install your local copy into a virtualenv. Using one of the supported Python versions (see above), this is how you set up your fork for local development:
+    $ git clone git@github.com:your_name_here/ml_uncertainty.git
+3. Create a virtual environment to develop this project. Using one of the supported Python versions (see above), this is how you set up your fork for local development:
 
     ```
-    pip install virtualenv
-    virtualenv VIRTUAL_ENV_PATH/VIRTUAL_ENV_NAME
+    pip install virtualenv==20.25.1
+    virtualenv VIRTUAL_ENV_PATH # Including name
+    source VIRTUAL_ENV_PATH/bin/activate
     cd ml_uncertainty/
     pip install -r requirements_dev.txt
     ```
+
+For development in Windows, the process is the same as above, except, to activate the
+virtual environment, you must use the following:
+```
+source VIRTUAL_ENV_PATH/Scripts/activate
+```
+
+**NOTE for Windows developers:** 
+
+Windows uses CRLF line endings while Unix uses LF by default.
+Git tries to match line endings to the OS you are developing on. This 
+means that for those developing on Windows, Git might change line endings to CRLF.
+This may cause problems when trying to merge with the original code. So, please make
+sure that the auto conversion to CRLF is turned off and we force the line endings to
+be LF only. 
+
+To ensure this, in your terminal, navigate to the `ml_uncertainty` directory and type this:
+
+```
+git config --global core.autocrlf false # To ensure that the existing line endings aren't changed.
+git config core.eol lf # To ensure that the line endings in this repo are set to lf.
+```
+For further reference and details, please refer this [Stackoverflow link](https://stackoverflow.com/questions/2517190/how-do-i-force-git-to-use-lf-instead-of-crlf-under-windows).
+
 4. Create a branch for local development::
     ```
     git checkout -b name-of-your-bugfix-or-feature
@@ -100,6 +121,7 @@ Ready to contribute? Here's how to set up `ml_uncertainty` for local development
     git commit -m "Your detailed description of your changes."
     ```
     Ensure that your branch is in sync with the latest version of the main branch.
+    <!-- TODO: Demand that contributors rebase their features from the latest on the main branch -->
     ```    
     git pull origin main 
     ```

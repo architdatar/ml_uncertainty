@@ -1,13 +1,11 @@
 
-<!-- TODO : Make these dynamic-->
 ![Version badge](https://img.shields.io/badge/version-0.1.0-blue)
-![Python badge](https://img.shields.io/badge/python-3.8|3.9|3.10-blue?logo=python)
+![Python badge](https://img.shields.io/badge/python-3.8|3.9|3.10|3.11|3.12-blue?logo=python)
 ![License badge](https://img.shields.io/badge/License-MIT-blue)
 ![Format badge](https://img.shields.io/badge/code_format-black-black)
 ![Linting badge](https://img.shields.io/badge/code_linting-flake8-black)
 ![Test badge](https://img.shields.io/badge/tests-pytest-black?logo=pytest)
-[![Build Status](https://dev.azure.com/CelaneseCorporation/TI%20Data%20Science%20Projects/_apis/build/status%2Fml_uncertainty%20(1)?branchName=main)](https://dev.azure.com/CelaneseCorporation/TI%20Data%20Science%20Projects/_build/latest?definitionId=183&branchName=main)
-<!-- Add badges about black, flake8, and tests -->
+<!-- [![Build Status](https://dev.azure.com/CelaneseCorporation/TI%20Data%20Science%20Projects/_apis/build/status%2Fml_uncertainty%20(1)?branchName=main)](https://dev.azure.com/CelaneseCorporation/TI%20Data%20Science%20Projects/_build/latest?definitionId=183&branchName=main) -->
 
 ML Uncertainty
 =============================
@@ -16,7 +14,7 @@ ML Uncertainty
 
 ML Uncertainty is a Python module for machine learning inference build on top of scikit-learn and autograd packages, and is distributed under the MIT license. 
 
-This package has been built by Archit Datar (archit.datar@celanese.com, architdatar@gmail.com). 
+This package has been built by Archit Datar (architdatar@gmail.com). 
 
 Intended audience
 ----
@@ -24,13 +22,13 @@ This package is intended to benefit data scientists and ML enthusiasts.
 
 Motivation
 ----
-* Too often in machine learning, we fit complex models, but cannot produce prediction intervals or feature significance. 
+* Too often in machine learning, we fit complex models, but cannot quantity their precision via prediction intervals or feature significance.
 
-* This is especially true of the scikit-learn environment which is extremely easy to use but does not offer these functionalities.  
+* This is especially true of the scikit-learn environment which is extremely easy to use but does not offer these functionalities.
 
 * However, in many use cases, especially where we have small and fat datasets, these are insights are critical to produce reliable models and insights. 
 
-* Enter ML Uncertainty! This provides an easy API to get all these insights from models. 
+* Enter ML Uncertainty! This provides an easy API to get all these insights from models.
 
 * It takes scikit-learn fitted models as inputs and uses appropriate statistics to quantify the uncertainties in ML models.
 
@@ -55,9 +53,9 @@ Features
 
      For ensemble models, it can inform if given features are truly important or if they just seem so due to the instability of the model.
 
-2. **Prediction intervals:** Can produce prediction and confidence intervals for mathematical models including ML models.
+2. **Prediction intervals:** Can produce prediction and confidence intervals for parametric and non-parametric ML models.
 
-3. **Error propagation:** For a model, what would be the prediction intervals look like given uncertainty in input data and / or model parameters? 
+3. **Error propagation:** Propagates error from input / model parameters to the outputs.
 
 4. **Non-Linear regression:** Scikit-learn-style API to fit non-linear models. 
 
