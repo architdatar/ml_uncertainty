@@ -46,7 +46,9 @@ Topics
 
 ## Tests
 1. Write test for cases in error propagation.py where there are errors in X (i.e., X_err is not None)
+2. Create code coverage tests.
 
 ## Documentation
 1. Write more documentation for internal methods.
 2. More documentation for class attributes.
+3. Publish documentation using mkdocs.
