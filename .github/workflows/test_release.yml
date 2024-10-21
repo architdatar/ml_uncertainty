@@ -2,9 +2,6 @@
 
 name: build & release
 
-permissions:
-  contents: write
-
 # Controls when the action will run.
 on:
   # Triggers the workflow on push or pull request events but only for the master branch
@@ -59,7 +56,7 @@ jobs:
           python -m pip install --upgrade pip
           pip install setuptools wheel
 
-       # declare package_version, repo_owner, repo_name, package_name so you may use it in web hooks.
+        # declare package_version, repo_owner, repo_name, package_name so you may use it in web hooks.
       - name: Declare variables for convenient use
         id: variables_step
         run: |
@@ -91,30 +88,18 @@ jobs:
       #   with:
       #     tag_name: ${{ github.ref_name }}
       #     release_name: Release ${{ github.ref_name }}
-      #     # body: ${{ steps.build_changelog.outputs.changelog }}
-      #     body_path: ./CHANGELOG.md
+      #     body: ${{ steps.build_changelog.outputs.changelog }}
       #     draft: false
       #     prerelease: false
 
-      - name: create github release
-        id: create_release
-        uses: softprops/action-gh-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          tag_name: ${{ github.ref_name }}
-          body_path: ./CHANGELOG.md
-          files: dist/*.whl
-          draft: false
-          prerelease: false
-          
       - name: publish to PYPI
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
           user: __token__
-          password: ${{ secrets.PYPI_API_TOKEN }}
-          # skip_existing: true
-          # repository-url: https://pypi.org/legacy/
+          password: ${{ secrets.TEST_PYPI_API_TOKEN }}
+          # skip-existing: true
+          # repository-url: https://test.pypi.org/p/ml_uncertainty
+          repository-url: https://test.pypi.org/legacy/
           verbose: true
 
   # notification:

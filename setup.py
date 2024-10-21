@@ -16,21 +16,22 @@ with open("requirements.txt") as requirements_file:
 requirements = requirement_list
 #requirements = [ ]
 
-test_requirements = ['pytest>=3', ]
+test_requirements = ['pytest==6.2.4', "click==8.0.3", 
+                     "black==21.7b0", "flake8==3.7.8"]
 
 setup(
     author="Archit Nikhil Datar",
     author_email='architdatar@gmail.com',
-    python_requires='>=3.6',
+    python_requires='>=3.9,<=3.12',
     classifiers=[
-        'Development Status :: 2 - Pre-Alpha',
+        "Development Status :: 3 - Alpha",
         'Intended Audience :: Developers',
         'License :: OSI Approved :: MIT License',
         'Natural Language :: English',
-        'Programming Language :: Python :: 3',
-        'Programming Language :: Python :: 3.6',
-        'Programming Language :: Python :: 3.7',
-        'Programming Language :: Python :: 3.8',
+        'Programming Language :: Python :: 3.9',
+        'Programming Language :: Python :: 3.10',
+        'Programming Language :: Python :: 3.11',
+        'Programming Language :: Python :: 3.12',
     ],
     description="Uncertainty quantification and model inference for machine learning models",
     entry_points={
@@ -40,7 +41,8 @@ setup(
     },
     install_requires=requirements,
     license="MIT license",
-    long_description=readme + '\n\n' + history,
+    long_description=readme,
+    long_description_content_type='text/markdown',
     include_package_data=True,
     keywords='ml_uncertainty',
     name='ml_uncertainty',
@@ -48,6 +50,6 @@ setup(
     test_suite='tests',
     tests_require=test_requirements,
     url='https://github.com/architdatar/ml_uncertainty',
-    version='0.1.0',
+    version='0.1.0a1',
     zip_safe=False,
 )
