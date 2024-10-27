@@ -1,0 +1,69 @@
+[tool.poetry]
+name = "ml_uncertainty"
+version = "0.1.0"
+description = "Uncertainty quantification and model inference for machine learning models"
+authors = ["Archit Nikhil Datar <architdatar@gmail.com>"]
+readme = "README.md"
+homepage = "https://github.com/architdatar/ml_uncertainty"
+license = "MIT"
+classifiers = [
+    "Development Status :: 2 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Natural Language :: English",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+]
+keywords = ["ml_uncertainty"]
+
+[tool.poetry.dependencies]
+python = ">=3.8 <=3.12"
+numpy = "^1.17"
+scipy = "^1.7"
+pandas = "^1.5"
+scikit-learn = "^1.0.2"
+autograd = "^1.6.2"
+
+[tool.poetry.extras]
+test = [
+    { package = "pytest", version = "6.2.4" },
+    { package = "click", version = "8.0.3" },
+    { package = "black", version = "21.7b0" },
+    { package = "flake8", version = "3.7.8" }
+    { package = "tox", version = "3.14.0" }
+]
+
+[tool.poetry.dev-dependencies]
+pip = ">=19.2.3"
+bump2version = "0.5.11"
+wheel = "0.33.6"
+watchdog = "0.9.0"
+coverage = "4.5.4"
+Sphinx = "1.8.5"
+twine = "1.14.0"
+pytest = "6.2.4"
+click = "8.0.3"
+black = "21.7b0"
+numpy = "1.25.2"
+scipy = "1.11.1"
+pandas = "2.0.3"
+scikit-learn = "1.3.0"
+autograd = "1.6.2"
+patsy = "0.5.3"
+statsmodels = "0.14.0"
+matplotlib = "3.7.2"
+matplotlib-inline = "0.1.6"
+seaborn = "0.12.2"
+
+[[tool.poetry.scripts]]
+ml_uncertainty = "ml_uncertainty.cli:main"
+
+[tool.poetry.urls]
+"Changelog" = "CHANGELOG.md"
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
