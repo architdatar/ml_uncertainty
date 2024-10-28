@@ -52,13 +52,6 @@ matplotlib = "3.7.2"
 matplotlib-inline = "0.1.6"
 seaborn = "0.12.2"
 
-
-[[tool.poetry.scripts]]
-ml_uncertainty = "ml_uncertainty.cli:main"
-
-[tool.poetry.urls]
-"Changelog" = "CHANGELOG.md"
-
 [build-system]
 requires = ["poetry-core>=1.0.0"]
 build-backend = "poetry.core.masonry.api"
