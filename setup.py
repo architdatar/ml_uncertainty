@@ -21,7 +21,7 @@ test_requirements = ['pytest>=3', ]
 setup(
     author="Archit Nikhil Datar",
     author_email='architdatar@gmail.com',
-    python_requires='>=3.9 <=3.12',
+    python_requires='>=3.9,<=3.12',
     classifiers=[
         "Development Status :: 3 - Alpha",
         'Intended Audience :: Developers',
