@@ -27,14 +27,6 @@ pandas = "^1.5"
 scikit-learn = "^1.0.2"
 autograd = "^1.6.2"
 
-[tool.poetry.extras]
-test = [
-    { package = "pytest", version = "6.2.4" },
-    { package = "click", version = "8.0.3" },
-    { package = "black", version = "21.7b0" },
-    { package = "flake8", version = "3.7.8" },
-    { package = "tox", version = "3.14.0" }
-]
 
 [tool.poetry.dev-dependencies]
 pip = ">=19.2.3"
@@ -47,6 +39,8 @@ twine = "1.14.0"
 pytest = "6.2.4"
 click = "8.0.3"
 black = "21.7b0"
+flake8 = "3.7.8"
+tox = "3.14.0"
 numpy = "1.25.2"
 scipy = "1.11.1"
 pandas = "2.0.3"
@@ -57,6 +51,7 @@ statsmodels = "0.14.0"
 matplotlib = "3.7.2"
 matplotlib-inline = "0.1.6"
 seaborn = "0.12.2"
+
 
 [[tool.poetry.scripts]]
 ml_uncertainty = "ml_uncertainty.cli:main"
