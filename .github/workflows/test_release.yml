@@ -101,6 +101,7 @@ jobs:
           # skip-existing: true
           # repository-url: https://test.pypi.org/p/ml_uncertainty
           repository-url: https://test.pypi.org/legacy/
+          verbose: true
 
   # notification:
   #   needs: release
