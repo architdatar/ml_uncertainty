@@ -32,7 +32,7 @@ test = [
     { package = "pytest", version = "6.2.4" },
     { package = "click", version = "8.0.3" },
     { package = "black", version = "21.7b0" },
-    { package = "flake8", version = "3.7.8" }
+    { package = "flake8", version = "3.7.8" },
     { package = "tox", version = "3.14.0" }
 ]
 
