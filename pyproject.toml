@@ -7,7 +7,7 @@ readme = "README.md"
 homepage = "https://github.com/architdatar/ml_uncertainty"
 license = "MIT"
 classifiers = [
-    "Development Status :: 2 - Alpha",
+    "Development Status :: 3 - Alpha",
     "Intended Audience :: Developers",
     "License :: OSI Approved :: MIT License",
     "Natural Language :: English",
