@@ -54,7 +54,7 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install tox-gh-actions poetry
+          pip install setuptools wheel
 
         # declare package_version, repo_owner, repo_name, package_name so you may use it in web hooks.
       - name: Declare variables for convenient use
@@ -62,8 +62,8 @@ jobs:
         run: |
           echo "repo_owner=${GITHUB_REPOSITORY%/*}" >> $GITHUB_OUTPUT
           echo "repo_name=${GITHUB_REPOSITORY#*/}" >> $GITHUB_OUTPUT
-          echo "package_name=`poetry version | awk '{print $1}'`" >> $GITHUB_OUTPUT
-          echo "package_version=`poetry version --short`" >> $GITHUB_OUTPUT
+          echo "package_name=`wheel version | awk '{print $1}'`" >> $GITHUB_OUTPUT
+          echo "package_version=`wheel --version`" >> $GITHUB_OUTPUT
         shell: bash
 
       # Learn about mkdocs and how to publish documentation.
@@ -78,9 +78,8 @@ jobs:
 
       - name: Build wheels and source tarball
         run: |
-          poetry lock
-          poetry build
-
+          python setup.py sdist bdist_wheel
+          
       # - name: Create Release
       #   id: create_release
       #   uses: actions/create-release@v1

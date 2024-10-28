@@ -21,16 +21,16 @@ test_requirements = ['pytest>=3', ]
 setup(
     author="Archit Nikhil Datar",
     author_email='architdatar@gmail.com',
-    python_requires='>=3.9',
+    python_requires='>=3.9 <=3.12',
     classifiers=[
-        'Development Status :: 2 - Pre-Alpha',
+        "Development Status :: 3 - Alpha",
         'Intended Audience :: Developers',
         'License :: OSI Approved :: MIT License',
         'Natural Language :: English',
-        'Programming Language :: Python :: 3',
-        'Programming Language :: Python :: 3.6',
-        'Programming Language :: Python :: 3.7',
-        'Programming Language :: Python :: 3.8',
+        'Programming Language :: Python :: 3.9',
+        'Programming Language :: Python :: 3.10',
+        'Programming Language :: Python :: 3.11',
+        'Programming Language :: Python :: 3.12',
     ],
     description="Uncertainty quantification and model inference for machine learning models",
     entry_points={
