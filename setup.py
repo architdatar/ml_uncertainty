@@ -16,7 +16,8 @@ with open("requirements.txt") as requirements_file:
 requirements = requirement_list
 #requirements = [ ]
 
-test_requirements = ['pytest>=3', ]
+test_requirements = ['pytest==6.2.4', "click==8.0.3", 
+                     "black==21.7b0", "flake8==3.7.8"]
 
 setup(
     author="Archit Nikhil Datar",
@@ -40,7 +41,8 @@ setup(
     },
     install_requires=requirements,
     license="MIT license",
-    long_description=readme + '\n\n' + history,
+    long_description=readme,
+    long_description_content_type='text/markdown',
     include_package_data=True,
     keywords='ml_uncertainty',
     name='ml_uncertainty',
