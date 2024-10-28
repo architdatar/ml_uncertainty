@@ -21,12 +21,11 @@ keywords = ["ml_uncertainty"]
 
 [tool.poetry.dependencies]
 python = ">=3.8 <=3.12"
-numpy = "^1.17"
-scipy = "^1.7"
-pandas = "^1.5"
-scikit-learn = "^1.0.2"
-autograd = "^1.6.2"
-
+numpy = ">=1.17"
+scipy = ">=1.7"
+pandas = ">=1.5"
+scikit-learn = ">=1.0.2"
+autograd = ">=1.6.2"
 
 [tool.poetry.dev-dependencies]
 pip = ">=19.2.3"
