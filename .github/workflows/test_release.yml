@@ -100,7 +100,7 @@ jobs:
           password: ${{ secrets.TEST_PYPI_API_TOKEN }}
           # skip-existing: true
           # repository-url: https://test.pypi.org/p/ml_uncertainty
-          repository-url: https://test.pypi.org/legacy
+          repository-url: https://test.pypi.org/legacy/
 
   # notification:
   #   needs: release
