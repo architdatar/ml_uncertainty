@@ -1,6 +1,6 @@
 # Publish package on release branch if it's tagged with 'v*'
 
-name: build & release
+name: test build & release
 
 # Controls when the action will run.
 on:
