@@ -1,20 +1,27 @@
 
 ![Version badge](https://img.shields.io/badge/version-0.1.0-blue)
-![Python badge](https://img.shields.io/badge/python-3.9|3.10|3.11|3.12-blue?logo=python)
+![Python badge](https://img.shields.io/badge/python-3.9|3.10|3.11-blue?logo=python)
 ![License badge](https://img.shields.io/badge/License-MIT-blue)
 ![Format badge](https://img.shields.io/badge/code_format-black-black)
 ![Linting badge](https://img.shields.io/badge/code_linting-flake8-black)
 ![Test badge](https://img.shields.io/badge/tests-pytest-black?logo=pytest)
-<!-- [![Build Status](https://dev.azure.com/CelaneseCorporation/TI%20Data%20Science%20Projects/_apis/build/status%2Fml_uncertainty%20(1)?branchName=main)](https://dev.azure.com/CelaneseCorporation/TI%20Data%20Science%20Projects/_build/latest?definitionId=183&branchName=main) -->
+[![tests](https://github.com/architdatar/ml_uncertainty/actions/workflows/run_tests.yml/badge.svg)](https://github.com/architdatar/ml_uncertainty/actions/workflows/run_tests.yml)
 
 ML Uncertainty
 =============================
-## Compute prediction intervals and parameter uncertainties for ML models in 4 lines of code
 
+ML Uncertainty is a Python package which provides a scikit-learn-like interface to obtain prediction intervals and model parameter estimation for machine learning models in less than 4 lines of code.
 
-ML Uncertainty is a Python module for machine learning inference build on top of scikit-learn and autograd packages, and is distributed under the MIT license. 
+It is build on top of scikit-learn and autograd packages, and is distributed under the MIT license. 
 
 This package has been built by Archit Datar (architdatar@gmail.com). 
+
+Getting started
+----
+Install from PyPI with
+```
+pip install ml-uncertainty
+```
 
 Intended audience
 ----
@@ -62,7 +69,7 @@ Features
 Installation
 ------------
 ### Dependencies
-Python versions: See badges above.
+Python versions: See badges above.\
 Packages: See [requirements.txt](./requirements.txt).
 
 ### User installation

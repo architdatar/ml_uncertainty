@@ -20,6 +20,16 @@ you through the process.
 .. _Python installation guide: http://docs.python-guide.org/en/latest/starting/installation/ -->
 
 
+Stable release
+--------------
+
+To install ML Uncertainty Quantification, run this command in your terminal:
+```
+pip install ml-uncertainty
+```
+
+This is the preferred method to install ML Uncertainty Quantification, as it will always install the most recent stable release.
+
 From source
 ------------
 
