@@ -31,7 +31,6 @@ setup(
         'Programming Language :: Python :: 3.9',
         'Programming Language :: Python :: 3.10',
         'Programming Language :: Python :: 3.11',
-        'Programming Language :: Python :: 3.12',
     ],
     description="Uncertainty quantification and model inference for machine learning models",
     entry_points={

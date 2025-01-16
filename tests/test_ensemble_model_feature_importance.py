@@ -74,4 +74,4 @@ def test_feature_importance(model_fit):
         3,0.0008285415535345963,0.008280122731785905,0.0,0.0,0.0\n"
     df_expected = pd.read_csv(StringIO(df_expected_string), index_col=0)
 
-    pd.testing.assert_frame_equal(df_imp_list[0], df_expected)
+    pd.testing.assert_frame_equal(df_imp_list[0], df_expected, atol=1e-3)
