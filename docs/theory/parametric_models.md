@@ -25,7 +25,7 @@ $$ df(\hat{y}) = \frac{\sum_{i=1}^N Cov(\hat{y_i}, y_i)}{\sigma_\epsilon^2}  $$
 
 As mentioned in ESL Pg 233 [Ref 1]. 
 
-However, in the literature, some people have approximated the model degrees of freedom in the same way as that for linear models.[Ref 2.] In this version (0.1.0), the degrees of freedom computed by the function `set_model_dof` which returns the class attribute `model_dof`, the degrees of freedom are computed by considering the non-linear model as a linear model as done in Ref 2. Thus, the foregoing discussion is about linear models. 
+However, obtaining this exact estimate will require simulation and retraining the model multiple times. Thus, we steer clear of it for now. In the literature, some people have approximated the model degrees of freedom in the same way as that for linear models.[Ref 2.] In this version (0.1.0), the degrees of freedom computed by the function `set_model_dof` which returns the class attribute `model_dof`, the degrees of freedom are computed by considering the non-linear model as a linear model as done in Ref 2. Thus, we use the same method. 
 
 I.e., for a non-linear model given by:
 
@@ -79,9 +79,14 @@ $$ df(\lambda_1, \lambda_2) = Tr(\textbf{H}_{\lambda_2}(\mathcal{A})) $$
 
 For training data with $n$ samples,
 
-Total dof = $n-1$
+If the model has an intercept,
+Residual degrees of freedom (dof) = Error dof = $n$ - model dof - $1$
 
-Residual degrees of freedom (dof) = Error dof = Total dof - model dof
+If the model does not have an intercept,
+Residual degrees of freedom (dof) = Error dof = $n$ - model dof
+
+This is in line with the convention used by statsmodels and elsewhere. [Ref 4]
+
 
 ## Estimating mean sum of squares ($\hat{\sigma}^2$)
 
@@ -91,7 +96,7 @@ $$ \hat{\sigma}^2 =  \frac{r(\hat{y}, y)^Tr(\hat{y}, y)} {\mathrm{Error\ dof}}$$
 
 ## Calculation of the variance-covariance matrix
 
-This is discussed in a course handout by Niclas Börlin at CMU. [Ref 4] 
+This is discussed in a course handout by Niclas Börlin at CMU. [Ref 5] 
 
 Basically, it is related to the Hessian matrix of the loss with respect to the parameters.
 
@@ -102,7 +107,7 @@ $$ Var(\hat{\beta}) = \hat{\sigma}^2(\nabla^2\mathcal{L}(\hat{\beta}))^{-1}$$
 ## Estimating confidence and prediction intervals
 
 ### Confidence intervals
-Confidence intervals are estimated using the propagation of uncertainties principle that the variances are additive. [Refs 5, 6]
+Confidence intervals are estimated using the propagation of uncertainties principle that the variances are additive. [Refs 6, 7]
 
 For some response dependent on inputs and parameters, 
 
@@ -139,8 +144,9 @@ $$ Var(\hat{y} | \mathbf{X}, \bm{\beta}) = Var(E(\hat{y} | \mathbf{X}, \bm{\beta
 2. Ruckstuhl, A., Introduction to Nonlinear Regression, https://stat.ethz.ch/~stahel/courses/cheming/nlreg10E.pdf.
 3. Zou, H., Hastie, T., Regularization and Variable
 Selection via the Elastic Net, https://hastie.su.domains/TALKS/enet_talk.pdf, Pg 22.
-4. Nonlinear Optimization, https://www8.cs.umu.se/kurser/5DA001/HT07/lectures/lsq-handouts.pdf. 
-5. Propagation of Uncertainties, https://web.physics.utah.edu/~belz/phys3719/lecture10.pdf; 
-6. Lecture 11: Standard Error, Propagation of
+4. Statsmodels (v0.15.0) source code. https://www.statsmodels.org/dev/_modules/statsmodels/regression/linear_model.html#OLS
+5. Nonlinear Optimization, https://www8.cs.umu.se/kurser/5DA001/HT07/lectures/lsq-handouts.pdf. 
+6. Propagation of Uncertainties, https://web.physics.utah.edu/~belz/phys3719/lecture10.pdf; 
+7. Lecture 11: Standard Error, Propagation of
 Error, Central Limit Theorem in the Real World
 , https://www.stat.cmu.edu/~cshalizi/36-220/lecture-11.pdf

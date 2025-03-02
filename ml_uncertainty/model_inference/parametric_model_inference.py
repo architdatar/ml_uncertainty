@@ -558,8 +558,15 @@ class ParametricModelInference:
         self.model_dof = model_dof
 
     def _set_error_dof(self):
-        """Error dof = n-p"""
-        self.error_dof = self.X_train.shape[0] - 1 - self.model_dof
+        """Error dof = n-p-1 when intercept is present.
+        Error dof = n-p when intercept is absent.
+        This is in accordance with statsmodels.
+        See docs for RegressionResults.
+        """
+        if self.intercept:
+            self.error_dof = self.X_train.shape[0] - 1 - self.model_dof
+        else:
+            self.error_dof = self.X_train.shape[0] - self.model_dof
 
     def _set_sigma(self):
         """Computes residual mean squared error of the fit."""
