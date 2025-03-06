@@ -21,6 +21,10 @@ autograd==1.6.2
 patsy==0.5.3
 statsmodels==0.14.0
 
+# Dependencies required to run examples.
 matplotlib==3.7.2
 matplotlib-inline==0.1.6
 seaborn==0.12.2
+
+jupyter==1.1.1
+scikit-fda==0.9.1

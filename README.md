@@ -76,9 +76,9 @@ Packages: See [requirements.txt](./requirements.txt).
 See [./docs/installation.md](/docs/installation.md).
 
 ## Examples
-To run the [examples](examples), some additional plots need to be made which require matplotlib and seaborn packages. These can be installed using:
+To run the [examples](examples), some additional plots and calculations need to be made which require other packages. These can be installed using:
 ```
-pip install matplotlib seaborn
+pip install matplotlib seaborn jupyter scikit-fda
 ```
 
 Check out some of the these [examples](examples) to try out the package. These examples are best run in [VS code](https://code.visualstudio.com/). 
