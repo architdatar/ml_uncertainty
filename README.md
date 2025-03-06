@@ -7,7 +7,7 @@
 ![Test badge](https://img.shields.io/badge/tests-pytest-black?logo=pytest)
 [![tests](https://github.com/architdatar/ml_uncertainty/actions/workflows/run_tests.yml/badge.svg)](https://github.com/architdatar/ml_uncertainty/actions/workflows/run_tests.yml)
 
-ML Uncertainty
+![ML Uncertainty](./docs/images/ML_uncertainty_logo.jpg)
 =============================
 
 ML Uncertainty is a Python package which provides a scikit-learn-like interface to obtain prediction intervals and model parameter estimation for machine learning models in less than 4 lines of code.
