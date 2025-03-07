@@ -1,5 +1,5 @@
 
-![Version badge](https://img.shields.io/badge/version-0.1.0-blue)
+![Version badge](https://img.shields.io/badge/version-0.1.1-blue)
 ![Python badge](https://img.shields.io/badge/python-3.9|3.10|3.11-blue?logo=python)
 ![License badge](https://img.shields.io/badge/License-MIT-blue)
 ![Format badge](https://img.shields.io/badge/code_format-black-black)

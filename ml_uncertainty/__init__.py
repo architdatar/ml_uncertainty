@@ -2,7 +2,7 @@
 
 __author__ = """Archit Nikhil Datar"""
 __email__ = "architdatar@gmail.com"
-__version__ = "0.1.0"
+__version__ = "0.1.1"
 
 # Import the required subdirectories.
 from . import model_inference

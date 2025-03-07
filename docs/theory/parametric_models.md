@@ -25,7 +25,7 @@ $$ df(\hat{y}) = \frac{\sum_{i=1}^N Cov(\hat{y_i}, y_i)}{\sigma_\epsilon^2}  $$
 
 As mentioned in ESL Pg 233 [Ref 1]. 
 
-However, obtaining this exact estimate will require simulation and retraining the model multiple times. Thus, we steer clear of it for now. In the literature, some people have approximated the model degrees of freedom in the same way as that for linear models.[Ref 2.] In this version (0.1.0), the degrees of freedom computed by the function `set_model_dof` which returns the class attribute `model_dof`, the degrees of freedom are computed by considering the non-linear model as a linear model as done in Ref 2. Thus, we use the same method. 
+However, obtaining this exact estimate will require simulation and retraining the model multiple times. Thus, we steer clear of it for now. In the literature, some people have approximated the model degrees of freedom in the same way as that for linear models.[Ref 2.] In this version, the degrees of freedom computed by the function `set_model_dof` which returns the class attribute `model_dof`, the degrees of freedom are computed by considering the non-linear model as a linear model as done in Ref 2. Thus, we use the same method. 
 
 I.e., for a non-linear model given by:
 
@@ -33,7 +33,7 @@ $$ y = f(\textbf{X}_{n \times p}, \beta_{p \times 1}) $$
 
 Degrees of freedom = $p$. 
 
-In version 0.1.0 for this code, we assume that any non-linear model is of this form. 
+In this version for this code, we assume that any non-linear model is of this form. 
 
 However, we also allow users to specify a model intercept as the first parameter. This can be done using the argument `fit_intercept=True` in the `NonLinearRegression` model class. In this case, we assume that the model is of the form:
 
