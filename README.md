@@ -1,5 +1,5 @@
 
-![Version badge](https://img.shields.io/badge/version-0.1.0-blue)
+![Version badge](https://img.shields.io/badge/version-0.1.1-blue)
 ![Python badge](https://img.shields.io/badge/python-3.9|3.10|3.11-blue?logo=python)
 ![License badge](https://img.shields.io/badge/License-MIT-blue)
 ![Format badge](https://img.shields.io/badge/code_format-black-black)
@@ -7,7 +7,7 @@
 ![Test badge](https://img.shields.io/badge/tests-pytest-black?logo=pytest)
 [![tests](https://github.com/architdatar/ml_uncertainty/actions/workflows/run_tests.yml/badge.svg)](https://github.com/architdatar/ml_uncertainty/actions/workflows/run_tests.yml)
 
-ML Uncertainty
+![ML Uncertainty](./docs/images/ML_uncertainty_logo.jpg)
 =============================
 
 ML Uncertainty is a Python package which provides a scikit-learn-like interface to obtain prediction intervals and model parameter estimation for machine learning models in less than 4 lines of code.
@@ -76,9 +76,9 @@ Packages: See [requirements.txt](./requirements.txt).
 See [./docs/installation.md](/docs/installation.md).
 
 ## Examples
-To run the [examples](examples), some additional plots need to be made which require matplotlib and seaborn packages. These can be installed using:
+To run the [examples](examples), some additional plots and calculations need to be made which require other packages. These can be installed using:
 ```
-pip install matplotlib seaborn
+pip install matplotlib seaborn jupyter scikit-fda
 ```
 
 Check out some of the these [examples](examples) to try out the package. These examples are best run in [VS code](https://code.visualstudio.com/). 
