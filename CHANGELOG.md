@@ -2,7 +2,7 @@
 
 0.1.1 (2025-03-07)
 ------------------
-
+* Cleaned up the repository by removing unnecessary files.
 * Added ML uncertainty logo to README.md
 * Converted old examples to ipynb format. Deleted corresponding .py files
 * Added new examples illustrating ML uncertainty for basis spline functions
