@@ -6,6 +6,7 @@
 ![Linting badge](https://img.shields.io/badge/code_linting-flake8-black)
 ![Test badge](https://img.shields.io/badge/tests-pytest-black?logo=pytest)
 [![tests](https://github.com/architdatar/ml_uncertainty/actions/workflows/run_tests.yml/badge.svg)](https://github.com/architdatar/ml_uncertainty/actions/workflows/run_tests.yml)
+[![PyPI Downloads](https://static.pepy.tech/badge/ml-uncertainty)](https://pepy.tech/projects/ml-uncertainty)
 
 ![ML Uncertainty](./docs/images/ML_uncertainty_logo.jpg)
 =============================
