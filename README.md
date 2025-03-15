@@ -6,15 +6,14 @@
 ![Linting badge](https://img.shields.io/badge/code_linting-flake8-black)
 ![Test badge](https://img.shields.io/badge/tests-pytest-black?logo=pytest)
 [![tests](https://github.com/architdatar/ml_uncertainty/actions/workflows/run_tests.yml/badge.svg)](https://github.com/architdatar/ml_uncertainty/actions/workflows/run_tests.yml)
+[![PyPI Downloads](https://static.pepy.tech/badge/ml-uncertainty)](https://pepy.tech/projects/ml-uncertainty)
 
 ![ML Uncertainty](./docs/images/ML_uncertainty_logo.jpg)
 =============================
 
-ML Uncertainty is a Python package which provides a scikit-learn-like interface to obtain prediction intervals and model parameter estimation for machine learning models in less than 4 lines of code.
+ML Uncertainty is a Python package which provides a scikit-learn-like interface to obtain prediction intervals and model parameter error estimation for machine learning models.
 
-It is build on top of scikit-learn and autograd packages, and is distributed under the MIT license. 
-
-This package has been built by Archit Datar (architdatar@gmail.com). 
+All in less than 4 lines of code.
 
 Getting started
 ----
@@ -22,6 +21,49 @@ Install from PyPI with
 ```
 pip install ml-uncertainty
 ```
+
+## Examples
+**View:** View all [examples](./examples). 
+
+**Run:** To run examples, some additional packages are required since they require plots for visualization. Install these using:
+```
+pip install matplotlib seaborn jupyter scikit-fda
+```
+
+### First example: Linear regression
+Consider a linear regression model fit with scikit-learn. The uncertainty estimation can be done as follows:
+
+```Python
+# Fit model with sklearn.
+regr = LinearRegression(fit_intercept=True)
+regr.fit(X_expt, y_expt)
+
+# Set up error estimation with ML uncertainty. 
+inf = ParametricModelInference()
+inf.set_up_model_inference(X_expt, y_expt, regr)
+
+# Obtain parameter error estimate with ML Uncertainty
+df_feature_imp = inf.get_parameter_errors()
+
+# Obtain prediction intervals with ML Uncertainty.
+df_int = inf.get_intervals(X_expt, confidence_level=95.0, distribution="t")
+```
+
+The result looks like:
+![img](./docs/images/linear_regression.jpg)
+
+Find the full example [here](./examples/linear_regression.ipynb).
+
+### Other examples
+
+* [Parameter error estimation](examples/parametric_model.ipynb)
+* [Non-linear regression](examples/non_linear_regression_arrhenius.py)
+* [Weighted non-linear least squares regression](examples/weighted_non_linear_regression_arrhenius.ipynb)
+* [Error Propagation](examples/error_propagation.py)
+* [Regression splines](examples/spline_wage_data.ipynb)
+* [Regression with periodic data](examples/fourier_basis.ipynb)
+* [Random forest regression ](examples/ensemble_model.py)
+
 
 Intended audience
 ----
@@ -75,20 +117,6 @@ Packages: See [requirements.txt](./requirements.txt).
 ### User installation
 See [./docs/installation.md](/docs/installation.md).
 
-## Examples
-To run the [examples](examples), some additional plots and calculations need to be made which require other packages. These can be installed using:
-```
-pip install matplotlib seaborn jupyter scikit-fda
-```
-
-Check out some of the these [examples](examples) to try out the package. These examples are best run in [VS code](https://code.visualstudio.com/). 
-* [Non-linear regression example with a quadratic model](examples/non_linear_regression_quadratic.py)
-* [Non-linear regression example with an Arrhenius model](examples/non_linear_regression_arrhenius.py)
-* [Parametric model inference with Arrhenius model](examples/parametric_model.py)
-* [Error Propagation with Arrhenius model](examples/error_propagation.py)
-* [Model inference for a random forest regressor model](examples/ensemble_model.py)
-
-
 ## Theoretical foundations
 
 Discussion about the theory used can be found here:
@@ -106,6 +134,10 @@ pip install statsmodels==0.14.0
 ```
 
 The `EnsembleModelInference` does not have a code to benchmark it against to the best of my knowledge. However, the code follows the ideas developed in the work by [Zhang et al. (2020)](https://www.tandfonline.com/doi/abs/10.1080/00031305.2019.1585288?journalCode=utas20). The test is that a $(1-\alpha)\times100$ % prediction interval must contain $(1-\alpha)$ proportion of the training data. See benchmarking codes [here](tests/benchmarking/). 
+
+Author
+-------
+Archit Datar (architdatar@gmail.com)
 
 
 Credits

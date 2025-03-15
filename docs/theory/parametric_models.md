@@ -116,8 +116,8 @@ $$ y = f(\bf{X}, \bf{\beta})  $$
 The uncertainties are given by
 
 $$ \delta y = \delta f(\bf{X}, \bf{\beta}) $$
-$$ \delta y= \sqrt{(\nabla_{\textbf{X}}f) \delta\textbf{X} (\nabla_{\textbf{X}}f)^T
-        + (\nabla_{\bm{\beta}}f) \delta\bm{\beta} (\nabla_{\bm{\beta}}f)^T} $$
+$$ \delta y= \sqrt{(\nabla_{\textbf{X}}f) \delta\textbf{X}^2 (\nabla_{\textbf{X}}f)^T
+        + (\nabla_{\bm{\beta}}f) \delta\bm{\beta}^2 (\nabla_{\bm{\beta}}f)^T} $$
 
 ### Prediction intervals
 
