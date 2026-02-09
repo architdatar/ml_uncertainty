@@ -383,8 +383,8 @@ class ParametricModelInference:
 
             # Get regularization info.
             self.regularization = "l2"
-            self.l1_penalty = self.estimator.alpha
-            self.l2_penalty = None
+            self.l1_penalty = None
+            self.l2_penalty = self.estimator.alpha
 
             self.model_kwargs = dict()
             self.residual_kwargs = dict()
