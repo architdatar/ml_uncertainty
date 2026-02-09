@@ -3,3 +3,4 @@ scipy>=1.7
 pandas>=1.5
 scikit-learn>=1.0.2
 autograd>=1.6.2
+statsmodels==0.14.1
